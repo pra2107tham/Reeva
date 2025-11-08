@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-// import { Geist, Geist_Mono } from "next/font/google";
+import Layout from "@/components/Layout";
 import "./globals.css";
 // import "../framer/styles.css";
 
@@ -36,9 +36,11 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={``}
-        style={{ backgroundColor: "var(--unframer-ui-2)", color: "var(--unframer-white)" }}
+        style={{ backgroundColor: "var(--unframer-ui-2)",color: "var(--unframer-white)"  }}
       >
-        {children}
+        <Layout style={{minHeight: "100vh", display: "flex", flexDirection: "row", justifyContent: "center"}}>
+          {children}
+        </Layout>
       </body>
     </html>
   );
