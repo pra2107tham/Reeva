@@ -313,6 +313,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 							data-framer-name={"Spacer"}
 							layoutDependency={layoutDependency}
 							layoutId={"coSk8IiPZ"}
+							style={{ height: "0px" }}
 						/>
 						<motion.div
 							className={"framer-1adchwi"}
@@ -549,14 +550,20 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 										layoutDependency={layoutDependency}
 										layoutId={"ZGBDw7mVQ"}
 									>
-										<RichText
+										<RichTextWithFXWithOptimizedAppearEffect
 											__fromCanvasComponent={true}
+											__perspectiveFX={false}
+											__smartComponentFX={true}
+											__targetOpacity={1}
+											animate={animation2}
 											className={"framer-r4w771"}
+											data-framer-appear-id={"r4w771"}
 											data-framer-name={"Text"}
-											effect={textEffect}
 											fonts={["Inter"]}
+											initial={animation1}
 											layoutDependency={layoutDependency}
 											layoutId={"s0yhe0MIQ"}
+											optimized={true}
 											style={{
 												"--framer-link-text-color": "rgb(0, 153, 255)",
 												"--framer-link-text-decoration": "underline",
@@ -604,7 +611,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 													}
 												</motion.p>
 											</React.Fragment>
-										</RichText>
+										</RichTextWithFXWithOptimizedAppearEffect>
 									</motion.div>
 								</motion.div>
 								<MotionDivWithFXWithOptimizedAppearEffect

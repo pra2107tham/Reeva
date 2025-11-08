@@ -13,11 +13,15 @@ export default function Layout({
 }) {
   return (
     <div>
-      <NavBar.Responsive style={{ width: '100%'}} />
+      <div style={{ position: "relative", zIndex: 10 }}>
+        <NavBar.Responsive style={{ width: '100%'}} />
+      </div>
       <div style={style}>
         {children}
       </div>
-      <Footer.Responsive style={{ width: '100%'}} />
+      <div style={{ position: "relative", zIndex: 10 }}>
+        <Footer.Responsive style={{ width: '100%'}} />
+      </div>
     </div>
   )
 }
