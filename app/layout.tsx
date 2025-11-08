@@ -36,7 +36,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={``}
-        style={{ backgroundColor: "var(--unframer-ui-2)" }}
+        style={{ backgroundColor: "var(--unframer-ui-2)", color: "var(--unframer-white)" }}
       >
         {children}
       </body>

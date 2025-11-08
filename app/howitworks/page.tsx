@@ -1,7 +1,7 @@
 "use client";
 import MainHowItWorks from "@/framer/main-how-it-works.jsx";
 
-export default function Home() {
+export default function HowItWorks() {
   // RichText content - these accept React.ReactNode despite TypeScript types saying undefined
   const description = (
     <p>
@@ -50,11 +50,6 @@ export default function Home() {
 
   return (
     <div>
-      <h1>Hello World</h1>
-      {/* Use Responsive variant for automatic breakpoint handling */}
-      {/* <Hero404.Responsive className="text-white"/> */}
-      {/* <AboutPratham.Responsive className="text-white"/> */}
-      {/* MainHowItWorks with props - matching component structure */}
       <MainHowItWorks.Responsive
         className="text-white"
         date="2025"
