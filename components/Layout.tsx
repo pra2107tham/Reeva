@@ -13,7 +13,7 @@ export default function Layout({
 }) {
   return (
     <div>
-      <div style={{ position: "relative", zIndex: 10 }}>
+      <div style={{ position: "absolute", top: "0px", left: "0px", right: "0px", zIndex: 10 }}>
         <NavBar.Responsive style={{ width: '100%'}} />
       </div>
       <div style={style}>

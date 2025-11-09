@@ -4,7 +4,7 @@ import Background from "@/framer/background";
 
 export default function NotFound() {
   return (
-    <div style={{ position: "relative", minHeight: "100vh" }}>
+    <div style={{ position: "relative", minHeight: "100vh", width: "100%" }}>
       {/* Background layer - behind everything */}
       <Background.Responsive
         style={{
@@ -20,7 +20,7 @@ export default function NotFound() {
         }}
       />
       {/* Content layer - above background, below navbar/footer */}
-      <div style={{ position: "relative", zIndex: 1, pointerEvents: "auto" }}>
+      <div style={{ position: "relative", zIndex: 1, pointerEvents: "auto", width: "100%" }}>
         <Hero404.Responsive style={{ width: "100%" }} />
       </div>
     </div>

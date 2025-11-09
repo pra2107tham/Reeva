@@ -313,7 +313,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 							data-framer-name={"Spacer"}
 							layoutDependency={layoutDependency}
 							layoutId={"coSk8IiPZ"}
-							style={{ height: "0px" }}
+							// style={{ height: "0px" }}
 						/>
 						<motion.div
 							className={"framer-1adchwi"}
