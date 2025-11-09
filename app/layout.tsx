@@ -38,7 +38,7 @@ export default function RootLayout({
         className={``}
         style={{ backgroundColor: "var(--unframer-ui-2)",color: "var(--unframer-white)"  }}
       >
-        <Layout style={{minHeight: "100vh", display: "flex", flexDirection: "row", justifyContent: "center"}}>
+        <Layout style={{minHeight: "100vh", display: "flex", flexDirection: "row", justifyContent: "center", width: "100%"}}>
           {children}
         </Layout>
       </body>
