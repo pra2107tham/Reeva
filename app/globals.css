@@ -590,3 +590,20 @@ body {
   line-height: 10px; /* as in your spec */
   font-weight: 700;  /* P12 Bold */
 }
+
+/* Override WhyHow component width to allow inline style to work */
+section.framer-TqhQ8.framer-unpgzs,
+section.framer-TqhQ8.framer-v-k3n6ql.framer-unpgzs,
+section.framer-TqhQ8.framer-v-uafeuk.framer-unpgzs {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Make all parent containers of WhyHow component full width */
+div:has(> section.framer-TqhQ8.framer-unpgzs),
+div:has(> div > section.framer-TqhQ8.framer-unpgzs),
+div:has(> div > div > section.framer-TqhQ8.framer-unpgzs),
+div:has(> div > div > div > section.framer-TqhQ8.framer-unpgzs) {
+  width: 100% !important;
+  max-width: 100% !important;
+}
