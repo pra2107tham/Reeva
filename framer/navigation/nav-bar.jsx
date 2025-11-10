@@ -206,6 +206,24 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 		return true;
 	};
 	const router = useRouter();
+	
+	// Helper function to determine if a menu item should be active based on activePage
+	const getMenuItemVariant = (pageId) => {
+		// Map webPageIds to active page states
+		// "augiA20Il" = Home, "hetOMwTYW" = About, "ADJCSktRp" = Portfolio/How it Works, "iEYhqIzLi" = Contact
+		const pageToActiveState = {
+			"augiA20Il": "I3GaZxydO", // Home Active
+			"hetOMwTYW": "zzSGFktzP", // About Active
+			"ADJCSktRp": "FJ1T56A5y", // Portfolio Active (How it Works)
+			"iEYhqIzLi": "jyprgoSzZ", // Contact Active
+		};
+		
+		const expectedActiveState = pageToActiveState[pageId];
+		// Return human-readable variant names that NavigationTextHover component expects
+		// The component will map these to internal codes: "Active" -> "dckrgQoZs", "In-Active" -> "vbxf8HL8_"
+		return Z1Zg6hqg0 === expectedActiveState ? "Active" : "In-Active";
+	};
+	
 	return (
 		<LayoutGroup id={layoutId ?? defaultLayoutId}>
 			<Variants animate={variants} initial={false}>
@@ -553,7 +571,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 														id: "O6b3wpXms",
 														layoutId: "O6b3wpXms",
 														TqaTpTiSx: false,
-														variant: "dckrgQoZs",
+														variant: getMenuItemVariant("augiA20Il"),
 														width: "100%",
 														X2yrtSssb: false,
 														...addPropertyOverrides(
@@ -639,12 +657,12 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 												>
 													{_jsx(stdin_default2, {
 														aLnDlFZKR: resolvedLinks1[0],
-														Cn6fz_Vow: "About",
+														Cn6fz_Vow: "About Me",
 														height: "100%",
 														id: "fagyALQ94",
 														layoutId: "fagyALQ94",
 														TqaTpTiSx: false,
-														variant: "dckrgQoZs",
+														variant: getMenuItemVariant("hetOMwTYW"),
 														width: "100%",
 														X2yrtSssb: false,
 														...addPropertyOverrides(
@@ -730,12 +748,12 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 												>
 													{_jsx(stdin_default2, {
 														aLnDlFZKR: resolvedLinks2[0],
-														Cn6fz_Vow: "Portfolio",
+														Cn6fz_Vow: "How it Works",
 														height: "100%",
 														id: "z7X7x7ZM0",
 														layoutId: "z7X7x7ZM0",
 														TqaTpTiSx: false,
-														variant: "dckrgQoZs",
+														variant: getMenuItemVariant("ADJCSktRp"),
 														width: "100%",
 														X2yrtSssb: false,
 														...addPropertyOverrides(
@@ -826,7 +844,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 														id: "T9v9R_TIt",
 														layoutId: "T9v9R_TIt",
 														TqaTpTiSx: false,
-														variant: "dckrgQoZs",
+														variant: getMenuItemVariant("iEYhqIzLi"),
 														width: "100%",
 														X2yrtSssb: false,
 														...addPropertyOverrides(
