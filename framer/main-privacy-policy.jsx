@@ -340,7 +340,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 									>
 										{(collection, paginationInfo, loadMore) => (
 											<_Fragment>
-												{collection?.map(
+												{(collection && collection.length > 0 ? collection : [{}]).map(
 													(
 														{
 															id: idHgc8ft99g2,
@@ -353,6 +353,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 														},
 														index,
 													) => {
+														const fallbackId = idHgc8ft99g2 || `fallback-${index || 0}`;
 														WxefFDjNTHgc8ft99g2 ??= "";
 														yn3XiFF9SHgc8ft99g2 ??= "";
 														NHqcQ4k6oHgc8ft99g2 ??= "";
@@ -369,7 +370,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 														);
 														const visible2 = isSet(zSxRelg24Hgc8ft99g2);
 														return (
-															<LayoutGroup id={`Hgc8ft99g-${idHgc8ft99g2}`}>
+															<LayoutGroup id={`Hgc8ft99g-${fallbackId}`}>
 																<PathVariablesContext.Provider
 																	value={{
 																		jQLZtPWi0: jQLZtPWi0Hgc8ft99g2,
@@ -491,15 +492,14 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																							</SmartComponentScopedContainer>
 																						</ComponentViewportProvider>
 																					)}
-																					{visible1 && (
-																						<motion.div
-																							className={"framer-1nloz4o"}
-																							data-framer-name={"Title"}
-																							layoutDependency={
-																								layoutDependency
-																							}
-																							layoutId={"tr0hch_1I"}
-																						>
+																					<motion.div
+																						className={"framer-1nloz4o"}
+																						data-framer-name={"Title"}
+																						layoutDependency={
+																							layoutDependency
+																						}
+																						layoutId={"tr0hch_1I"}
+																					>
 																							<RichText
 																								__fromCanvasComponent={true}
 																								className={"framer-fizo4p"}
@@ -517,7 +517,6 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																									"--framer-link-text-decoration":
 																										"underline",
 																								}}
-																								text={NHqcQ4k6oHgc8ft99g2}
 																								verticalAlignment={"top"}
 																								withExternalLayout={true}
 																							>
@@ -543,13 +542,12 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																													"linear-gradient(90deg, var(--token-59e77027-930e-45f7-94aa-a8ffadf9e382, rgb(255, 255, 255)) 0%, var(--token-14f74354-f5bc-49c1-9486-2936a231e276, rgba(255, 255, 255, 0.3)) 350%)",
 																											}}
 																										>
-																											{"Privacy Policy"}
+																							{"Privacy Policy — Reeva"}
 																										</motion.span>
 																									</motion.h1>
 																								</React.Fragment>
 																							</RichText>
 																						</motion.div>
-																					)}
 																				</motion.div>
 																				<motion.div
 																					className={"framer-6of88e"}
@@ -570,7 +568,6 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																							"--framer-link-text-decoration":
 																								"underline",
 																						}}
-																						text={textContent}
 																						verticalAlignment={"top"}
 																						withExternalLayout={true}
 																						{...addPropertyOverrides(
@@ -631,22 +628,19 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																										"left",
 																								}}
 																							>
-																								{
-																									"Updated Date: Oct 28, 2024 at 12:00 AM"
-																								}
+																								{"Last updated: 11 Nov, 2025"}
 																							</motion.p>
 																						</React.Fragment>
 																					</RichText>
 																				</motion.div>
 																			</motion.div>
 																		</motion.div>
-																		{visible2 && (
-																			<motion.div
-																				className={"framer-1uj1jec"}
-																				data-framer-name={"Bottom"}
-																				layoutDependency={layoutDependency}
-																				layoutId={"IlayY1Mjl"}
-																			>
+																		<motion.div
+																			className={"framer-1uj1jec"}
+																			data-framer-name={"Bottom"}
+																			layoutDependency={layoutDependency}
+																			layoutId={"IlayY1Mjl"}
+																		>
 																				<RichText
 																					__fromCanvasComponent={true}
 																					className={"framer-1jsooxm"}
@@ -667,10 +661,180 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																					verticalAlignment={"top"}
 																					withExternalLayout={true}
 																				>
-																					{zSxRelg24Hgc8ft99g2}
+																					<React.Fragment>
+																						<motion.h3
+																							className={"framer-styles-preset-pyuk04"}
+																							data-styles-preset={"Q9YGoPiQM"}
+																						>
+																							{"1. Overview"}
+																						</motion.h3>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							{"Reeva ("}
+																							<motion.strong>{"we"}</motion.strong>
+																							{", "}
+																							<motion.strong>{"our"}</motion.strong>
+																							{", "}
+																							<motion.strong>{"us"}</motion.strong>
+																							{") helps users organize and rediscover their saved Instagram Reels through AI. This Privacy Policy explains how we collect, use, and protect your information when you use our website or app."}
+																						</motion.p>
+																						<motion.h3
+																							className={"framer-styles-preset-pyuk04"}
+																							data-styles-preset={"Q9YGoPiQM"}
+																						>
+																							{"2. Information We Collect"}
+																						</motion.h3>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							<motion.strong>{"Account Information"}</motion.strong>
+																							{": Your email address and username when you sign up."}
+																						</motion.p>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							<motion.strong>{"Instagram Data (only with your consent)"}</motion.strong>
+																							{": When you connect your Instagram account, we access your basic profile information and any Reels you share with us (via link or integration)."}
+																						</motion.p>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							<motion.strong>{"Usage Data"}</motion.strong>
+																							{": Basic analytics such as time spent and interactions within our platform."}
+																						</motion.p>
+																						<motion.h3
+																							className={"framer-styles-preset-pyuk04"}
+																							data-styles-preset={"Q9YGoPiQM"}
+																						>
+																							{"3. How We Use Your Data"}
+																						</motion.h3>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							{"We use this information to:"}
+																						</motion.p>
+																						<motion.ul>
+																							<motion.li>
+																								<motion.p
+																									className={"framer-styles-preset-x0s9r5"}
+																									data-styles-preset={"QhK6qqT5U"}
+																								>
+																									{"Display and organize your saved Reels"}
+																								</motion.p>
+																							</motion.li>
+																							<motion.li>
+																								<motion.p
+																									className={"framer-styles-preset-x0s9r5"}
+																									data-styles-preset={"QhK6qqT5U"}
+																								>
+																									{"Provide AI-powered summaries, tags, and search results"}
+																								</motion.p>
+																							</motion.li>
+																							<motion.li>
+																								<motion.p
+																									className={"framer-styles-preset-x0s9r5"}
+																									data-styles-preset={"QhK6qqT5U"}
+																								>
+																									{"Improve Reeva's performance and user experience"}
+																								</motion.p>
+																							</motion.li>
+																							<motion.li>
+																								<motion.p
+																									className={"framer-styles-preset-x0s9r5"}
+																									data-styles-preset={"QhK6qqT5U"}
+																								>
+																									{"Communicate important updates or service changes"}
+																								</motion.p>
+																							</motion.li>
+																						</motion.ul>
+																						<motion.h3
+																							className={"framer-styles-preset-pyuk04"}
+																							data-styles-preset={"Q9YGoPiQM"}
+																						>
+																							{"4. How We Protect Your Data"}
+																						</motion.h3>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							{"Your data is stored securely and never shared or sold."}
+																						</motion.p>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							{"We do not post to your Instagram account or access private messages without your explicit consent."}
+																						</motion.p>
+																						<motion.h3
+																							className={"framer-styles-preset-pyuk04"}
+																							data-styles-preset={"Q9YGoPiQM"}
+																						>
+																							{"5. Third-Party Services"}
+																						</motion.h3>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							{"Reeva may use trusted third-party services (e.g., OpenAI, Firebase, or Meta APIs) to process or store limited data, strictly for functionality."}
+																						</motion.p>
+																						<motion.h3
+																							className={"framer-styles-preset-pyuk04"}
+																							data-styles-preset={"Q9YGoPiQM"}
+																						>
+																							{"6. Your Rights"}
+																						</motion.h3>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							{"You can:"}
+																						</motion.p>
+																						<motion.ul>
+																							<motion.li>
+																								<motion.p
+																									className={"framer-styles-preset-x0s9r5"}
+																									data-styles-preset={"QhK6qqT5U"}
+																								>
+																									{"Request deletion of your account and data at any time"}
+																								</motion.p>
+																							</motion.li>
+																							<motion.li>
+																								<motion.p
+																									className={"framer-styles-preset-x0s9r5"}
+																									data-styles-preset={"QhK6qqT5U"}
+																								>
+																									{"Disconnect your Instagram account whenever you wish"}
+																								</motion.p>
+																							</motion.li>
+																						</motion.ul>
+																						<motion.h3
+																							className={"framer-styles-preset-pyuk04"}
+																							data-styles-preset={"Q9YGoPiQM"}
+																						>
+																							{"7. Contact"}
+																						</motion.h3>
+																						<motion.p
+																							className={"framer-styles-preset-x0s9r5"}
+																							data-styles-preset={"QhK6qqT5U"}
+																						>
+																							{"For any privacy concerns, reach us at "}
+																							<motion.a
+																								href={"mailto:contactxreeva@gmail.com"}
+																								className={"framer-styles-preset-68ruwb"}
+																							>
+																								{"contactxreeva@gmail.com"}
+																							</motion.a>
+																							{"."}
+																						</motion.p>
+																					</React.Fragment>
 																				</RichText>
 																			</motion.div>
-																		)}
 																	</motion.div>
 																</PathVariablesContext.Provider>
 															</LayoutGroup>

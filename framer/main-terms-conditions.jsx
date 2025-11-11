@@ -328,7 +328,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 									>
 										{(collection, paginationInfo, loadMore) => (
 											<_Fragment>
-												{collection?.map(
+												{(collection && collection.length > 0 ? collection : [{}]).map(
 													(
 														{
 															id: idzKxT5CQtu2,
@@ -341,6 +341,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 														},
 														index,
 													) => {
+														const fallbackId = idzKxT5CQtu2 || `fallback-${index || 0}`;
 														yn3XiFF9SzKxT5CQtu2 ??= "";
 														WxefFDjNTzKxT5CQtu2 ??= "";
 														NHqcQ4k6ozKxT5CQtu2 ??= "";
@@ -354,7 +355,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 															"Last Updated: ",
 														);
 														return (
-															<LayoutGroup id={`zKxT5CQtu-${idzKxT5CQtu2}`}>
+															<LayoutGroup id={`zKxT5CQtu-${fallbackId}`}>
 																<PathVariablesContext.Provider
 																	value={{
 																		jQLZtPWi0: jQLZtPWi0zKxT5CQtu2,
@@ -495,7 +496,6 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																								"--framer-link-text-decoration":
 																									"underline",
 																							}}
-																							text={NHqcQ4k6ozKxT5CQtu2}
 																							verticalAlignment={"top"}
 																							withExternalLayout={true}
 																						>
@@ -521,7 +521,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																												"linear-gradient(90deg, var(--token-59e77027-930e-45f7-94aa-a8ffadf9e382, rgb(255, 255, 255)) 0%, var(--token-14f74354-f5bc-49c1-9486-2936a231e276, rgba(255, 255, 255, 0.3)) 350%)",
 																										}}
 																									>
-																										{"Terms & Conditions"}
+																										{"Terms of Service — Reeva"}
 																									</motion.span>
 																								</motion.h1>
 																							</React.Fragment>
@@ -547,7 +547,6 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																							"--framer-link-text-decoration":
 																								"underline",
 																						}}
-																						text={textContent}
 																						verticalAlignment={"top"}
 																						withExternalLayout={true}
 																						{...addPropertyOverrides(
@@ -609,7 +608,7 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																								}}
 																							>
 																								{
-																									"Last Updated: Oct 15, 2024 at 12:00 AM"
+																									"Last updated: 11 Nov, 2025"
 																								}
 																							</motion.p>
 																						</React.Fragment>
@@ -643,7 +642,157 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																				verticalAlignment={"top"}
 																				withExternalLayout={true}
 																			>
-																				{zSxRelg24zKxT5CQtu2}
+																				<React.Fragment>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"1. Acceptance of Terms"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"By accessing or using Reeva, you agree to these Terms of Service and our Privacy Policy."}
+																					</motion.p>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"2. Service Description"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"Reeva allows users to connect their Instagram accounts or share Reels to create a personal AI-powered library. The service provides summaries, tags, and search capabilities for saved content."}
+																					</motion.p>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"3. User Responsibilities"}
+																					</motion.h3>
+																					<motion.ul>
+																						<motion.li>
+																							<motion.p
+																								className={"framer-styles-preset-x0s9r5"}
+																								data-styles-preset={"QhK6qqT5U"}
+																							>
+																								{"You agree not to misuse the platform or violate Instagram's terms."}
+																							</motion.p>
+																						</motion.li>
+																						<motion.li>
+																							<motion.p
+																								className={"framer-styles-preset-x0s9r5"}
+																								data-styles-preset={"QhK6qqT5U"}
+																							>
+																								{"You are responsible for the accuracy of content you share."}
+																							</motion.p>
+																						</motion.li>
+																						<motion.li>
+																							<motion.p
+																								className={"framer-styles-preset-x0s9r5"}
+																								data-styles-preset={"QhK6qqT5U"}
+																							>
+																								{"You must be at least 13 years old to use Reeva."}
+																							</motion.p>
+																						</motion.li>
+																					</motion.ul>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"4. Data Usage"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"By connecting Instagram, you authorize Reeva to access only the data needed to provide our features."}
+																					</motion.p>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"We do not publish, repost, or modify your content on Instagram."}
+																					</motion.p>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"5. Intellectual Property"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"All AI-generated summaries and tags are owned by Reeva, but your original Reels and content remain your property."}
+																					</motion.p>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"6. Limitation of Liability"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"Reeva is provided "}
+																						<motion.em>{"\"as is.\""}</motion.em>
+																						{" We are not liable for any loss of data, downtime, or errors in AI outputs."}
+																					</motion.p>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"7. Termination"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"You may disconnect or delete your account at any time."}
+																					</motion.p>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"We reserve the right to suspend access for abuse or security issues."}
+																					</motion.p>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"8. Changes to Terms"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"We may update these Terms as our services evolve. Updated versions will be posted with a new effective date."}
+																					</motion.p>
+																					<motion.h3
+																						className={"framer-styles-preset-pyuk04"}
+																						data-styles-preset={"Q9YGoPiQM"}
+																					>
+																						{"9. Contact"}
+																					</motion.h3>
+																					<motion.p
+																						className={"framer-styles-preset-x0s9r5"}
+																						data-styles-preset={"QhK6qqT5U"}
+																					>
+																						{"Questions? Email us at "}
+																						<motion.a
+																							href={"mailto:contactxreeva@gmail.com"}
+																							className={"framer-styles-preset-68ruwb"}
+																						>
+																							{"contactxreeva@gmail.com"}
+																						</motion.a>
+																						{"."}
+																					</motion.p>
+																				</React.Fragment>
 																			</RichText>
 																		</motion.div>
 																	</motion.div>
