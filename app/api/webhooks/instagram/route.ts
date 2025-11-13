@@ -72,45 +72,24 @@ export async function GET(request: NextRequest) {
  * Instagram will send POST requests with webhook event data
  */
 export async function POST(request: NextRequest) {
-  // Log that POST request was received - this should ALWAYS log if the endpoint is hit
-  console.log('='.repeat(80));
-  console.log('[Instagram Webhook] POST request received at:', new Date().toISOString());
-  console.log('[Instagram Webhook] Request method:', request.method);
-  console.log('[Instagram Webhook] Request URL:', request.url);
-  console.log('[Instagram Webhook] Content-Type:', request.headers.get('content-type'));
-  console.log('[Instagram Webhook] Request headers:', Object.fromEntries(request.headers.entries()));
-  console.log('='.repeat(80));
-
   try {
-    // Get raw body text first for debugging (can only read body once)
+    // Parse JSON body
     const rawBody = await request.text();
-    console.log('[Instagram Webhook] Raw body length:', rawBody?.length || 0);
-    console.log('[Instagram Webhook] Raw body preview:', rawBody ? `${rawBody.substring(0, 500)}${rawBody.length > 500 ? '...' : ''}` : 'EMPTY');
-    
-    // Parse JSON
     let body;
+    
     if (!rawBody || rawBody.trim() === '') {
       console.warn('[Instagram Webhook] Empty body received');
       body = {};
     } else {
       try {
         body = JSON.parse(rawBody);
-        console.log('[Instagram Webhook] JSON parsed successfully');
       } catch (parseError) {
         console.error('[Instagram Webhook] JSON parse error:', parseError);
-        console.error('[Instagram Webhook] Raw body that failed to parse:', rawBody);
         return new NextResponse('Invalid JSON', {
           status: 400,
         });
       }
     }
-    
-    // Log the complete webhook payload
-    console.log('='.repeat(80));
-    console.log('[Instagram Webhook] Parsed payload:', JSON.stringify(body, null, 2));
-    console.log('[Instagram Webhook] Payload object type:', body.object);
-    console.log('[Instagram Webhook] Payload keys:', Object.keys(body));
-    console.log('='.repeat(80));
 
     // Instagram webhooks can have two formats:
     // 1. Test webhook format (from Meta Developer App panel):
@@ -139,32 +118,8 @@ export async function POST(request: NextRequest) {
 
     // Handle test webhook format (from Meta Developer App panel)
     if (body.field && body.value) {
-      console.log('[Instagram Webhook] Test webhook format detected');
-      console.log('[Instagram Webhook] Field:', body.field);
-      console.log('[Instagram Webhook] Value:', JSON.stringify(body.value, null, 2));
-      
-      // Log test webhook details
-      if (body.value.sender) {
-        console.log('[Instagram Webhook] Sender ID:', body.value.sender.id);
-      }
-      if (body.value.recipient) {
-        console.log('[Instagram Webhook] Recipient ID:', body.value.recipient.id);
-      }
-      if (body.value.timestamp) {
-        console.log('[Instagram Webhook] Timestamp:', body.value.timestamp);
-        console.log('[Instagram Webhook] Timestamp (parsed):', new Date(parseInt(body.value.timestamp) * 1000).toISOString());
-      }
-      if (body.value.message) {
-        console.log('[Instagram Webhook] Message:', JSON.stringify(body.value.message, null, 2));
-        if (body.value.message.text) {
-          console.log('[Instagram Webhook] Message text:', body.value.message.text);
-        }
-        if (body.value.message.mid) {
-          console.log('[Instagram Webhook] Message ID:', body.value.message.mid);
-        }
-      }
-      
-      console.log('[Instagram Webhook] Test webhook processed successfully');
+      const value = body.value;
+      console.log(`[Instagram Webhook] Test webhook - Field: ${body.field} | Sender: ${value.sender?.id} | Recipient: ${value.recipient?.id} | Message: ${value.message?.text || 'N/A'}`);
       return new NextResponse('OK', {
         status: 200,
       });
@@ -173,72 +128,49 @@ export async function POST(request: NextRequest) {
     // Handle actual Instagram webhook format
     if (body.object === 'instagram') {
       const entries = body.entry || [];
-      
-      console.log(`[Instagram Webhook] Processing ${entries.length} entry/entries`);
 
-      entries.forEach((entry: any, index: number) => {
-        console.log(`\n[Instagram Webhook] Entry ${index + 1}:`, {
-          id: entry.id,
-          time: entry.time,
-          timestamp: entry.time ? new Date(entry.time * 1000).toISOString() : 'N/A',
-        });
-
+      entries.forEach((entry: any) => {
         // Handle messaging events
         if (entry.messaging && Array.isArray(entry.messaging)) {
-          console.log(`[Instagram Webhook] Found ${entry.messaging.length} messaging event(s)`);
-          entry.messaging.forEach((message: any, msgIndex: number) => {
-            console.log(`[Instagram Webhook] Messaging event ${msgIndex + 1}:`, JSON.stringify(message, null, 2));
+          entry.messaging.forEach((msg: any) => {
+            const timestamp = msg.timestamp ? new Date(msg.timestamp).toISOString() : 'N/A';
+            console.log(`[Instagram Webhook] Message | Sender: ${msg.sender?.id} | Recipient: ${msg.recipient?.id} | Text: ${msg.message?.text || 'N/A'} | Time: ${timestamp}`);
           });
         }
 
-        // Handle changes events (for other Instagram events like comments, mentions, etc.)
+        // Handle changes events (comments, mentions, etc.)
         if (entry.changes && Array.isArray(entry.changes)) {
-          console.log(`[Instagram Webhook] Found ${entry.changes.length} change event(s)`);
-          entry.changes.forEach((change: any, changeIndex: number) => {
-            console.log(`[Instagram Webhook] Change event ${changeIndex + 1}:`, JSON.stringify(change, null, 2));
+          entry.changes.forEach((change: any) => {
+            console.log(`[Instagram Webhook] Change | Field: ${change.field} | Value: ${JSON.stringify(change.value)}`);
           });
         }
 
-        // Handle mentions (if present)
+        // Handle mentions
         if (entry.mentions && Array.isArray(entry.mentions)) {
-          console.log(`[Instagram Webhook] Found ${entry.mentions.length} mention(s)`);
-          entry.mentions.forEach((mention: any, mentionIndex: number) => {
-            console.log(`[Instagram Webhook] Mention ${mentionIndex + 1}:`, JSON.stringify(mention, null, 2));
+          entry.mentions.forEach((mention: any) => {
+            console.log(`[Instagram Webhook] Mention | Media ID: ${mention.media_id} | User: ${mention.user_id}`);
           });
         }
 
-        // Handle story mentions (if present)
+        // Handle story mentions
         if (entry.story_mentions && Array.isArray(entry.story_mentions)) {
-          console.log(`[Instagram Webhook] Found ${entry.story_mentions.length} story mention(s)`);
-          entry.story_mentions.forEach((storyMention: any, storyIndex: number) => {
-            console.log(`[Instagram Webhook] Story mention ${storyIndex + 1}:`, JSON.stringify(storyMention, null, 2));
+          entry.story_mentions.forEach((storyMention: any) => {
+            console.log(`[Instagram Webhook] Story Mention | Media ID: ${storyMention.media_id} | User: ${storyMention.user_id}`);
           });
         }
       });
-    } else {
-      console.log('[Instagram Webhook] Unknown object type:', body.object);
+    } else if (body.object) {
+      console.log(`[Instagram Webhook] Unknown object type: ${body.object}`);
     }
-
-    // Always return 200 OK to acknowledge receipt
-    // Instagram will retry if it doesn't receive a 200 response
-    console.log('[Instagram Webhook] Processing complete, returning 200 OK');
     return new NextResponse('OK', {
       status: 200,
     });
   } catch (error) {
-    console.error('='.repeat(80));
-    console.error('[Instagram Webhook] POST Error caught:', error);
-    
-    // Log error details
     if (error instanceof Error) {
-      console.error('[Instagram Webhook] Error name:', error.name);
-      console.error('[Instagram Webhook] Error message:', error.message);
-      console.error('[Instagram Webhook] Error stack:', error.stack);
+      console.error(`[Instagram Webhook] Error: ${error.message}`);
     } else {
-      console.error('[Instagram Webhook] Unknown error type:', typeof error);
-      console.error('[Instagram Webhook] Error value:', error);
+      console.error('[Instagram Webhook] Unknown error:', error);
     }
-    console.error('='.repeat(80));
 
     // Still return 200 to prevent Instagram from retrying
     // (or return 500 if you want Instagram to retry)
