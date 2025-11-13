@@ -58,7 +58,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+    <div style={{ width: "100%", maxWidth: "100%", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
       <Hero.Responsive style={{ width: "100%",zIndex: 3 }} />
       <Background.Responsive
         style={{

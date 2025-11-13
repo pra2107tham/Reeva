@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@motionone/dom": "^10.18.0",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.81.1",
     "next": "16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
