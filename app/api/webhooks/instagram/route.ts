@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Instagram Graph API Webhook Handler
+ * Instagram Graph API Webhook Handler (v24.0)
  * 
  * Handles webhook verification and event notifications from Instagram Graph API
+ * Compatible with Instagram Graph API v24.0
  * 
  * GET: Webhook verification (Instagram sends hub.mode, hub.challenge, hub.verify_token)
  * POST: Webhook event notifications
+ * 
+ * Note: The API version is configured when subscribing to webhooks in Meta App Dashboard.
+ * This endpoint is compatible with v24.0 webhook payloads.
  */
 
 // Webhook verification token (should match the one configured in Instagram App settings)
@@ -68,13 +72,44 @@ export async function GET(request: NextRequest) {
  * Instagram will send POST requests with webhook event data
  */
 export async function POST(request: NextRequest) {
+  // Log that POST request was received - this should ALWAYS log if the endpoint is hit
+  console.log('='.repeat(80));
+  console.log('[Instagram Webhook] POST request received at:', new Date().toISOString());
+  console.log('[Instagram Webhook] Request method:', request.method);
+  console.log('[Instagram Webhook] Request URL:', request.url);
+  console.log('[Instagram Webhook] Content-Type:', request.headers.get('content-type'));
+  console.log('[Instagram Webhook] Request headers:', Object.fromEntries(request.headers.entries()));
+  console.log('='.repeat(80));
+
   try {
-    const body = await request.json();
+    // Get raw body text first for debugging (can only read body once)
+    const rawBody = await request.text();
+    console.log('[Instagram Webhook] Raw body length:', rawBody?.length || 0);
+    console.log('[Instagram Webhook] Raw body preview:', rawBody ? `${rawBody.substring(0, 500)}${rawBody.length > 500 ? '...' : ''}` : 'EMPTY');
+    
+    // Parse JSON
+    let body;
+    if (!rawBody || rawBody.trim() === '') {
+      console.warn('[Instagram Webhook] Empty body received');
+      body = {};
+    } else {
+      try {
+        body = JSON.parse(rawBody);
+        console.log('[Instagram Webhook] JSON parsed successfully');
+      } catch (parseError) {
+        console.error('[Instagram Webhook] JSON parse error:', parseError);
+        console.error('[Instagram Webhook] Raw body that failed to parse:', rawBody);
+        return new NextResponse('Invalid JSON', {
+          status: 400,
+        });
+      }
+    }
     
     // Log the complete webhook payload
     console.log('='.repeat(80));
-    console.log('[Instagram Webhook] Event received at:', new Date().toISOString());
-    console.log('[Instagram Webhook] Full payload:', JSON.stringify(body, null, 2));
+    console.log('[Instagram Webhook] Parsed payload:', JSON.stringify(body, null, 2));
+    console.log('[Instagram Webhook] Payload object type:', body.object);
+    console.log('[Instagram Webhook] Payload keys:', Object.keys(body));
     console.log('='.repeat(80));
 
     // Instagram webhooks typically have this structure:
@@ -140,17 +175,24 @@ export async function POST(request: NextRequest) {
 
     // Always return 200 OK to acknowledge receipt
     // Instagram will retry if it doesn't receive a 200 response
+    console.log('[Instagram Webhook] Processing complete, returning 200 OK');
     return new NextResponse('OK', {
       status: 200,
     });
   } catch (error) {
-    console.error('[Instagram Webhook] POST Error:', error);
+    console.error('='.repeat(80));
+    console.error('[Instagram Webhook] POST Error caught:', error);
     
     // Log error details
     if (error instanceof Error) {
+      console.error('[Instagram Webhook] Error name:', error.name);
       console.error('[Instagram Webhook] Error message:', error.message);
       console.error('[Instagram Webhook] Error stack:', error.stack);
+    } else {
+      console.error('[Instagram Webhook] Unknown error type:', typeof error);
+      console.error('[Instagram Webhook] Error value:', error);
     }
+    console.error('='.repeat(80));
 
     // Still return 200 to prevent Instagram from retrying
     // (or return 500 if you want Instagram to retry)
