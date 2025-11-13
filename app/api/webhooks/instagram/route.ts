@@ -112,7 +112,19 @@ export async function POST(request: NextRequest) {
     console.log('[Instagram Webhook] Payload keys:', Object.keys(body));
     console.log('='.repeat(80));
 
-    // Instagram webhooks typically have this structure:
+    // Instagram webhooks can have two formats:
+    // 1. Test webhook format (from Meta Developer App panel):
+    // {
+    //   "field": "messages",
+    //   "value": {
+    //     "sender": {...},
+    //     "recipient": {...},
+    //     "timestamp": "...",
+    //     "message": {...}
+    //   }
+    // }
+    //
+    // 2. Actual webhook format:
     // {
     //   "object": "instagram",
     //   "entry": [
@@ -125,6 +137,40 @@ export async function POST(request: NextRequest) {
     //   ]
     // }
 
+    // Handle test webhook format (from Meta Developer App panel)
+    if (body.field && body.value) {
+      console.log('[Instagram Webhook] Test webhook format detected');
+      console.log('[Instagram Webhook] Field:', body.field);
+      console.log('[Instagram Webhook] Value:', JSON.stringify(body.value, null, 2));
+      
+      // Log test webhook details
+      if (body.value.sender) {
+        console.log('[Instagram Webhook] Sender ID:', body.value.sender.id);
+      }
+      if (body.value.recipient) {
+        console.log('[Instagram Webhook] Recipient ID:', body.value.recipient.id);
+      }
+      if (body.value.timestamp) {
+        console.log('[Instagram Webhook] Timestamp:', body.value.timestamp);
+        console.log('[Instagram Webhook] Timestamp (parsed):', new Date(parseInt(body.value.timestamp) * 1000).toISOString());
+      }
+      if (body.value.message) {
+        console.log('[Instagram Webhook] Message:', JSON.stringify(body.value.message, null, 2));
+        if (body.value.message.text) {
+          console.log('[Instagram Webhook] Message text:', body.value.message.text);
+        }
+        if (body.value.message.mid) {
+          console.log('[Instagram Webhook] Message ID:', body.value.message.mid);
+        }
+      }
+      
+      console.log('[Instagram Webhook] Test webhook processed successfully');
+      return new NextResponse('OK', {
+        status: 200,
+      });
+    }
+    
+    // Handle actual Instagram webhook format
     if (body.object === 'instagram') {
       const entries = body.entry || [];
       
