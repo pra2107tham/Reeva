@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('Auth:Callback')
 
 /**
  * GET /api/auth/callback
@@ -20,8 +23,11 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
-      console.error('[Auth Callback] Session exchange error:', error)
-      return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`)
+      log.error('Session exchange failed', error, { code: code ? 'present' : 'missing', type })
+      const errorMessage = error.message.includes('invalid') || error.message.includes('expired')
+        ? 'Authentication link is invalid or expired. Please try signing up again.'
+        : 'Authentication failed. Please try again.'
+      return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent(errorMessage)}`)
     }
 
     // Ensure profile exists
@@ -46,7 +52,7 @@ export async function GET(request: NextRequest) {
           })
 
         if (profileError) {
-          console.error('[Auth Callback] Profile creation error:', profileError)
+          log.warn('Profile creation failed during callback', { userId: data.user.id, error: profileError })
         }
       }
     }

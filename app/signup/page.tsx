@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Layout from '@/components/Layout'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -78,7 +77,6 @@ export default function SignupPage() {
   }
 
   return (
-    <Layout>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px 20px 20px' }}>
         <div style={{ maxWidth: '400px', width: '100%', background: 'rgba(255, 255, 255, 0.05)', padding: '40px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <h1 style={{ color: '#fff', marginBottom: '30px', fontSize: '28px', textAlign: 'center' }}>Sign Up</h1>
@@ -216,6 +214,5 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
-    </Layout>
   )
 }

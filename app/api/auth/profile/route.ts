@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('Auth:Profile')
 
 /**
  * GET /api/auth/profile
@@ -45,9 +48,9 @@ export async function GET(request: NextRequest) {
           .single()
 
         if (createError) {
-          console.error('[Profile] Error creating profile:', createError)
+          log.error('Failed to create profile', createError, { userId: user.id })
           return NextResponse.json(
-            { error: 'Failed to create profile' },
+            { error: 'Failed to create profile. Please try again.' },
             { status: 500 }
           )
         }
@@ -55,7 +58,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ profile: newProfile })
       }
 
-      console.error('[Profile] Error fetching profile:', profileError)
+      log.error('Failed to fetch profile', profileError, { userId: user.id })
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }
@@ -64,9 +67,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ profile })
   } catch (error) {
-    console.error('[Profile] Unexpected error:', error)
+    log.error('Unexpected error fetching profile', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An unexpected error occurred. Please try again later.' },
       { status: 500 }
     )
   }
@@ -109,18 +112,18 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('[Profile] Error updating profile:', updateError)
+      log.error('Failed to update profile', updateError, { userId: user.id })
       return NextResponse.json(
-        { error: 'Failed to update profile' },
+        { error: 'Failed to update profile. Please try again.' },
         { status: 400 }
       )
     }
 
     return NextResponse.json({ profile })
   } catch (error) {
-    console.error('[Profile] Unexpected error:', error)
+    log.error('Unexpected error fetching profile', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An unexpected error occurred. Please try again later.' },
       { status: 500 }
     )
   }

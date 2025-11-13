@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('Auth:ProfileCreate')
 
 /**
  * POST /api/auth/profile/create
@@ -67,18 +70,18 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (createError) {
-      console.error('[Profile Create] Error creating profile:', createError)
+      log.error('Failed to create profile', createError, { userId: user.id })
       return NextResponse.json(
-        { error: 'Failed to create profile', details: createError.message },
+        { error: 'Failed to create profile. Please try again.' },
         { status: 500 }
       )
     }
 
     return NextResponse.json({ profile })
   } catch (error) {
-    console.error('[Profile Create] Unexpected error:', error)
+    log.error('Unexpected error creating profile', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An unexpected error occurred. Please try again later.' },
       { status: 500 }
     )
   }

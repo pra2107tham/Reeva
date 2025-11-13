@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('Auth:Login')
 
 /**
  * POST /api/auth/login
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (error) {
-        console.error('[Login] Error:', error)
+        log.error('Login failed', error, { email, provider })
         
         // Check if error is due to unconfirmed email
         if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
@@ -63,8 +66,15 @@ export async function POST(request: NextRequest) {
           )
         }
         
+        // Return user-friendly error messages
+        const errorMessage = error.message.includes('Invalid login credentials') 
+          ? 'Invalid email or password. Please check your credentials and try again.'
+          : error.message.includes('Too many requests')
+          ? 'Too many login attempts. Please wait a few minutes and try again.'
+          : 'Login failed. Please check your credentials and try again.'
+        
         return NextResponse.json(
-          { error: error.message },
+          { error: errorMessage },
           { status: 400 }
         )
       }
@@ -93,7 +103,7 @@ export async function POST(request: NextRequest) {
             })
 
           if (profileError) {
-            console.error('[Login] Profile creation error:', profileError)
+            log.warn('Profile creation failed during login', { userId: data.user.id, error: profileError })
             // Don't fail login if profile creation fails - it can be created later
           }
         }
@@ -129,9 +139,9 @@ export async function POST(request: NextRequest) {
       })
 
       if (error) {
-        console.error('[Login] Google OAuth error:', error)
+        log.error('Google OAuth initiation failed', error)
         return NextResponse.json(
-          { error: error.message },
+          { error: 'Failed to initiate Google login. Please try again.' },
           { status: 400 }
         )
       }
@@ -147,9 +157,9 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     )
   } catch (error) {
-    console.error('[Login] Unexpected error:', error)
+    log.error('Unexpected error during login', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An unexpected error occurred. Please try again later.' },
       { status: 500 }
     )
   }

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('Auth:Logout')
 
 /**
  * POST /api/auth/logout
@@ -13,18 +16,18 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.auth.signOut()
 
     if (error) {
-      console.error('[Logout] Error:', error)
+      log.error('Logout failed', error)
       return NextResponse.json(
-        { error: error.message },
+        { error: 'Failed to logout. Please try again.' },
         { status: 400 }
       )
     }
 
     return NextResponse.json({ message: 'Logged out successfully' })
   } catch (error) {
-    console.error('[Logout] Unexpected error:', error)
+    log.error('Unexpected error during logout', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An unexpected error occurred. Please try again later.' },
       { status: 500 }
     )
   }

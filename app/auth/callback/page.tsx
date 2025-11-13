@@ -18,9 +18,6 @@ export default function AuthCallbackPage() {
         const hash = window.location.hash.substring(1)
         const queryString = window.location.search.substring(1)
         
-        console.log('[Auth Callback] Full hash:', hash.substring(0, 100) + '...')
-        console.log('[Auth Callback] Query string:', queryString.substring(0, 100) + '...')
-        
         // Check both hash fragment and query params for tokens
         const hashParams = new URLSearchParams(hash)
         const queryParams = new URLSearchParams(queryString)
@@ -32,44 +29,20 @@ export default function AuthCallbackPage() {
         // Also check for code parameter (used in some Supabase flows)
         const code = queryParams.get('code')
 
-        console.log('[Auth Callback] Hash params:', { 
-          hasAccessToken: !!accessToken, 
-          hasRefreshToken: !!refreshToken, 
-          accessTokenLength: accessToken?.length,
-          refreshTokenLength: refreshToken?.length,
-          type 
-        })
-
         // If we have a code parameter, redirect to API callback (handles OAuth)
         if (code && !accessToken) {
-          console.log('[Auth Callback] Found code parameter, redirecting to API callback')
           window.location.href = `/api/auth/callback?code=${code}&type=${type || 'signup'}`
           return
         }
 
         // If we have tokens in the hash or query, set the session
         if (accessToken && refreshToken) {
-          console.log('[Auth Callback] Attempting to set session...')
-          console.log('[Auth Callback] Access token length:', accessToken.length)
-          console.log('[Auth Callback] Refresh token length:', refreshToken.length)
-          
           let sessionData: any = null
           
           try {
-            // Try to get session first to see current state
-            const { data: currentSession } = await supabase.auth.getSession()
-            console.log('[Auth Callback] Current session before setSession:', currentSession.session ? 'exists' : 'none')
-            
             const { data, error: sessionError } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
-            })
-            
-            console.log('[Auth Callback] setSession response:', {
-              hasData: !!data,
-              hasSession: !!data?.session,
-              hasUser: !!data?.user,
-              error: sessionError ? sessionError.message : null
             })
 
             if (sessionError) {
@@ -78,7 +51,6 @@ export default function AuthCallbackPage() {
                 status: sessionError.status,
                 name: sessionError.name,
               }
-              console.error('[Auth Callback] Session error details:', errorDetails)
               
               // Log to server
               fetch('/api/auth/callback-log', {
@@ -87,17 +59,16 @@ export default function AuthCallbackPage() {
                 body: JSON.stringify({ 
                   error: 'Session setting failed',
                   details: errorDetails,
-                  hash: hash.substring(0, 200)
+                  hash: hash.substring(0, 200),
+                  url: window.location.href
                 }),
               }).catch(() => {})
               
-              window.location.href = `/login?error=${encodeURIComponent(sessionError.message || 'Authentication failed. Please try again.')}`
+              window.location.href = `/login?error=${encodeURIComponent('Authentication failed. Please try again.')}`
               return
             }
 
             if (!data || !data.session) {
-              console.error('[Auth Callback] No session returned after setSession', data)
-              
               // Log to server
               fetch('/api/auth/callback-log', {
                 method: 'POST',
@@ -105,7 +76,8 @@ export default function AuthCallbackPage() {
                 body: JSON.stringify({ 
                   error: 'No session returned',
                   details: { data: data ? 'exists but no session' : 'null', hasUser: !!data?.user },
-                  hash: hash.substring(0, 200)
+                  hash: hash.substring(0, 200),
+                  url: window.location.href
                 }),
               }).catch(() => {})
               
@@ -114,15 +86,11 @@ export default function AuthCallbackPage() {
             }
 
             sessionData = data
-            console.log('[Auth Callback] Session set successfully, user:', data.user?.id, 'session exists:', !!data.session)
             
             // Verify session was actually persisted
             const { data: verifySession } = await supabase.auth.getSession()
-            console.log('[Auth Callback] Session verification:', verifySession.session ? 'confirmed' : 'NOT SET')
             
             if (!verifySession.session) {
-              console.error('[Auth Callback] Session not persisted after setSession')
-              
               // Log to server
               fetch('/api/auth/callback-log', {
                 method: 'POST',
@@ -133,6 +101,7 @@ export default function AuthCallbackPage() {
                     setSessionReturned: !!sessionData?.session,
                     verifySessionExists: false
                   },
+                  url: window.location.href
                 }),
               }).catch(() => {})
               
@@ -143,8 +112,6 @@ export default function AuthCallbackPage() {
             // Small delay to ensure cookies are set
             await new Promise(resolve => setTimeout(resolve, 200))
           } catch (setSessionError: any) {
-            console.error('[Auth Callback] Exception during setSession:', setSessionError)
-            
             // Log to server
             fetch('/api/auth/callback-log', {
               method: 'POST',
@@ -156,11 +123,12 @@ export default function AuthCallbackPage() {
                   stack: setSessionError?.stack,
                   name: setSessionError?.name,
                 },
-                hash: hash.substring(0, 200)
+                hash: hash.substring(0, 200),
+                url: window.location.href
               }),
             }).catch(() => {})
             
-            window.location.href = `/login?error=${encodeURIComponent(setSessionError?.message || 'Failed to set session. Please try again.')}`
+            window.location.href = `/login?error=${encodeURIComponent('Authentication failed. Please try again.')}`
             return
           }
 
@@ -181,12 +149,10 @@ export default function AuthCallbackPage() {
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ full_name: fullName }),
-              }).catch((err) => {
-                console.error('[Auth Callback] Profile creation failed:', err)
+              }).catch(() => {
                 // Profile will be created on first profile page access
               })
             } catch (err) {
-              console.error('[Auth Callback] Profile creation error:', err)
               // Silent fail - profile will be created when user accesses profile page
             }
           }
@@ -201,8 +167,6 @@ export default function AuthCallbackPage() {
           // No tokens found, check for error
           const errorParam = hashParams.get('error') || searchParams.get('error')
           if (errorParam) {
-            console.error('[Auth Callback] Error in URL:', errorParam)
-            
             // Log to server
             fetch('/api/auth/callback-log', {
               method: 'POST',
@@ -210,14 +174,13 @@ export default function AuthCallbackPage() {
               body: JSON.stringify({ 
                 error: 'Error parameter in URL',
                 details: { errorParam },
-                hash: hash.substring(0, 200)
+                hash: hash.substring(0, 200),
+                url: window.location.href
               }),
             }).catch(() => {})
             
             window.location.href = `/login?error=${encodeURIComponent(errorParam)}`
           } else {
-            console.error('[Auth Callback] No tokens found in hash')
-            
             // Log to server
             fetch('/api/auth/callback-log', {
               method: 'POST',
@@ -233,8 +196,6 @@ export default function AuthCallbackPage() {
           }
         }
       } catch (err: any) {
-        console.error('[Auth Callback] Unexpected error:', err)
-        
         // Log to server
         fetch('/api/auth/callback-log', {
           method: 'POST',

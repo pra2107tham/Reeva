@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('Supabase:Service')
 
 /**
  * Service role client for backend operations
@@ -12,7 +15,7 @@ export function createServiceClient() {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('[Service Client] Missing environment variables:', {
+    log.error('Missing environment variables', new Error('Missing Supabase environment variables'), {
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseServiceKey,
     })

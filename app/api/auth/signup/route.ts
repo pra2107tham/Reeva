@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('Auth:Signup')
 
 /**
  * POST /api/auth/signup
@@ -43,9 +46,17 @@ export async function POST(request: NextRequest) {
       })
 
       if (error) {
-        console.error('[Signup] Error:', error)
+        log.error('Signup failed', error, { email })
+        
+        // Return user-friendly error messages
+        const errorMessage = error.message.includes('User already registered')
+          ? 'An account with this email already exists. Please login instead.'
+          : error.message.includes('Password')
+          ? 'Password does not meet requirements. Please use a stronger password.'
+          : 'Signup failed. Please check your information and try again.'
+        
         return NextResponse.json(
-          { error: error.message },
+          { error: errorMessage },
           { status: 400 }
         )
       }
@@ -71,9 +82,9 @@ export async function POST(request: NextRequest) {
       })
 
       if (error) {
-        console.error('[Signup] Google OAuth error:', error)
+        log.error('Google OAuth initiation failed', error)
         return NextResponse.json(
-          { error: error.message },
+          { error: 'Failed to initiate Google signup. Please try again.' },
           { status: 400 }
         )
       }
@@ -89,9 +100,9 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     )
   } catch (error) {
-    console.error('[Signup] Unexpected error:', error)
+    log.error('Unexpected error during signup', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An unexpected error occurred. Please try again later.' },
       { status: 500 }
     )
   }

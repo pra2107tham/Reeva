@@ -84,7 +84,7 @@ export default function ProfilePage() {
       router.push('/login')
       router.refresh()
     } catch (err) {
-      console.error('Logout error:', err)
+      // Silent fail - user will be redirected anyway
     }
   }
 
