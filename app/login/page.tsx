@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Layout from '@/components/Layout'
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -86,6 +87,7 @@ export default function LoginPage() {
   }
 
   return (
+    <Layout>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px 20px 20px' }}>
         <div style={{ maxWidth: '400px', width: '100%', background: 'rgba(255, 255, 255, 0.05)', padding: '40px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <h1 style={{ color: '#fff', marginBottom: '30px', fontSize: '28px', textAlign: 'center' }}>Login</h1>
@@ -199,5 +201,20 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+    </Layout>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <Layout>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px 20px 20px' }}>
+          <div style={{ color: '#fff', fontSize: '18px' }}>Loading...</div>
+        </div>
+      </Layout>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
