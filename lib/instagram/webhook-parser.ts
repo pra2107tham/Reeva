@@ -102,55 +102,77 @@ export async function forwardToInternalIngestion(events: IncomingMessagingEvent[
   for (const event of events) {
     // Fire and forget - don't await, just start the publish
     // This ensures webhook handler returns immediately
-    const publishPromise = (async () => {
-      try {
-        log.info('Publishing event to QStash', {
-          mid: event.mid,
-          senderIgId: event.sender_ig_id,
-          consumerUrl,
-        })
-        
-        const startTime = Date.now()
-        const qstash = getQStashClient()
-        
-        // Publish directly to QStash consumer endpoint
-        const messageId = await qstash.publishJSON({
-          url: consumerUrl,
-          body: event,
-          // Deduplication: Use Instagram message ID to prevent duplicate processing
-          deduplicationId: `ig_msg_${event.mid}`,
-          // Retries: Configure explicit retries
-          retries: 3,
-          // Label: Add label for better log filtering
-          label: 'instagram-messaging-event',
-          // Timeout: Set timeout for message processing (30 seconds)
-          timeout: 30,
-        })
-        
-        const duration = Date.now() - startTime
-        
-        log.info('Event published to QStash successfully', {
-          mid: event.mid,
-          messageId: messageId.messageId,
-          duration,
-          consumerUrl,
-        })
-      } catch (publishError: any) {
-        log.error('Failed to publish event to QStash', publishError, {
-          mid: event.mid,
-          consumerUrl,
-          errorMessage: publishError.message,
-          errorName: publishError.name,
-        })
-        // Don't throw - webhook handler should still return 200
-        // QStash will handle retries if needed
-      }
-    })()
-    
-    // Don't await - fire and forget
-    // Errors are logged but don't block the webhook response
-    publishPromise.catch(() => {
-      // Already logged above
+    // Use setImmediate to ensure this runs after the response is sent
+    setImmediate(() => {
+      const publishPromise = (async () => {
+        try {
+          log.info('Publishing event to QStash', {
+            mid: event.mid,
+            senderIgId: event.sender_ig_id,
+            consumerUrl,
+          })
+          
+          const startTime = Date.now()
+          const qstash = getQStashClient()
+          
+          // Add timeout wrapper for QStash publish (10 seconds max)
+          // This prevents hanging if QStash API is slow or unreachable
+          const qstashPublishPromise = qstash.publishJSON({
+            url: consumerUrl,
+            body: event,
+            // Deduplication: Use Instagram message ID to prevent duplicate processing
+            deduplicationId: `ig_msg_${event.mid}`,
+            // Retries: Configure explicit retries
+            retries: 3,
+            // Label: Add label for better log filtering
+            label: 'instagram-messaging-event',
+            // Timeout: Set timeout for message processing (30 seconds)
+            timeout: 30,
+          })
+          
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('QStash publish timeout after 10 seconds'))
+            }, 10000) // 10 second timeout for publish call itself
+          })
+          
+          const messageId = await Promise.race([qstashPublishPromise, timeoutPromise])
+          const duration = Date.now() - startTime
+          
+          log.info('Event published to QStash successfully', {
+            mid: event.mid,
+            messageId: messageId.messageId,
+            duration,
+            consumerUrl,
+          })
+        } catch (publishError: any) {
+          const duration = Date.now() - Date.now() // Will be negative, but that's okay
+          
+          if (publishError.message?.includes('timeout')) {
+            log.warn('QStash publish timed out (fire-and-forget)', {
+              mid: event.mid,
+              consumerUrl,
+              timeout: '10s',
+              note: 'QStash may still process the message if it was partially sent',
+            })
+          } else {
+            log.error('Failed to publish event to QStash', publishError, {
+              mid: event.mid,
+              consumerUrl,
+              errorMessage: publishError.message,
+              errorName: publishError.name,
+            })
+          }
+          // Don't throw - webhook handler should still return 200
+          // QStash will handle retries if needed
+        }
+      })()
+      
+      // Don't await - fire and forget
+      // Errors are logged but don't block the webhook response
+      publishPromise.catch(() => {
+        // Already logged above
+      })
     })
   }
 }
