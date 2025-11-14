@@ -1,4 +1,5 @@
 import { createLogger } from '@/lib/logger'
+import { getBaseUrl } from '@/lib/utils/url'
 import { IncomingMessagingEvent } from './ingestion'
 
 const log = createLogger('Instagram:WebhookParser')
@@ -60,7 +61,12 @@ export function parseMessagingEvents(body: any): IncomingMessagingEvent[] {
  * Forward parsed events to internal ingestion endpoint
  */
 export async function forwardToInternalIngestion(events: IncomingMessagingEvent[]): Promise<void> {
-  const internalUrl = process.env.INTERNAL_INGEST_URL || 'http://localhost:3000/api/internal/ingest-event'
+  // Use INTERNAL_INGEST_URL if explicitly set, otherwise construct from base URL
+  const baseUrl = process.env.INTERNAL_INGEST_URL || getBaseUrl()
+  const internalUrl = baseUrl 
+    ? `${baseUrl}/api/internal/ingest-event`
+    : 'http://localhost:3000/api/internal/ingest-event' // Fallback for local dev without env vars
+  
   const serviceToken = process.env.INTERNAL_SERVICE_TOKEN
 
   if (!serviceToken) {
@@ -68,21 +74,37 @@ export async function forwardToInternalIngestion(events: IncomingMessagingEvent[
     throw new Error('INTERNAL_SERVICE_TOKEN not configured')
   }
 
+  log.debug('Forwarding events to internal endpoint', {
+    internalUrl,
+    eventCount: events.length,
+    baseUrl,
+  })
+
   // Forward each event asynchronously
   for (const event of events) {
     try {
-      await fetch(internalUrl, {
+      const response = await fetch(internalUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-service-token': serviceToken,
         },
         body: JSON.stringify(event),
-      }).catch((error) => {
-        log.error('Failed to forward event to internal endpoint', error, { mid: event.mid })
       })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        log.error('Internal endpoint returned error', new Error(errorText), {
+          mid: event.mid,
+          status: response.status,
+          internalUrl,
+        })
+      }
     } catch (error) {
-      log.error('Error forwarding event', error, { mid: event.mid })
+      log.error('Failed to forward event to internal endpoint', error, {
+        mid: event.mid,
+        internalUrl,
+      })
     }
   }
 }
