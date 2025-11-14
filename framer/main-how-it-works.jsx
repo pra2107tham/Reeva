@@ -1040,33 +1040,33 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 											layoutId={"OoWsyvjBx"}
 										>
 											{visible11 && (
-												<motion.div
-													className={"framer-1nwi3wh"}
-													data-framer-name={"Heading/Tag"}
+											<motion.div
+												className={"framer-1nwi3wh"}
+												data-framer-name={"Heading/Tag"}
+												layoutDependency={layoutDependency}
+												layoutId={"O1966zEVe"}
+											>
+												<RichText
+													__fromCanvasComponent={true}
+													className={"framer-tpbgq0"}
+													data-framer-name={"Header"}
+													fonts={["Inter"]}
 													layoutDependency={layoutDependency}
-													layoutId={"O1966zEVe"}
-												>
-													<RichText
-														__fromCanvasComponent={true}
-														className={"framer-tpbgq0"}
-														data-framer-name={"Header"}
-														fonts={["Inter"]}
-														layoutDependency={layoutDependency}
-														layoutId={"KcbCvVBda"}
+													layoutId={"KcbCvVBda"}
 														text={subHeading3Prop}
-														verticalAlignment={"top"}
-														withExternalLayout={true}
-													>
-														<React.Fragment>
-															<motion.h4
-																className={"framer-styles-preset-1ing3ma"}
-																data-styles-preset={"VnmEZ_3BZ"}
-															>
+													verticalAlignment={"top"}
+													withExternalLayout={true}
+												>
+													<React.Fragment>
+														<motion.h4
+															className={"framer-styles-preset-1ing3ma"}
+															data-styles-preset={"VnmEZ_3BZ"}
+														>
 																{subHeading3Prop || "3. Retrieve Anything, Instantly"}
-															</motion.h4>
-														</React.Fragment>
-													</RichText>
-												</motion.div>
+														</motion.h4>
+													</React.Fragment>
+												</RichText>
+											</motion.div>
 											)}
 											{visible12 && (
 												<RichText
