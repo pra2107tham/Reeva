@@ -53,7 +53,9 @@ export async function upsertInstagramProfile(
     if (partialMeta?.profile_pic_url) profileData.profile_pic_url = partialMeta.profile_pic_url
 
     log.info('Upserting profile data', { igId, hasUsername: !!profileData.username })
-    const { data, error } = await supabase
+    
+    // Add timeout wrapper for database operations
+    const upsertPromise = supabase
       .from('instagram_profiles')
       .upsert(profileData, {
         onConflict: 'ig_id',
@@ -61,10 +63,44 @@ export async function upsertInstagramProfile(
       })
       .select()
       .single()
+    
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Database upsert timeout after 10 seconds')), 10000)
+    })
+    
+    log.info('Starting database upsert query', { igId })
+    let result
+    try {
+      result = await Promise.race([upsertPromise, timeoutPromise])
+      log.info('Database upsert query completed', { igId })
+    } catch (timeoutError: any) {
+      if (timeoutError.message?.includes('timeout')) {
+        log.error('Database upsert timed out', timeoutError, { igId, profileData })
+        throw new Error(`Database operation timed out: ${timeoutError.message}`)
+      }
+      log.error('Database upsert query failed', timeoutError, { igId, errorMessage: timeoutError?.message })
+      throw timeoutError
+    }
+    
+    log.info('Parsing database upsert result', { igId, hasResult: !!result })
+    const { data, error } = result as any
+    log.info('Database upsert result parsed', { igId, hasData: !!data, hasError: !!error })
 
     if (error) {
-      log.error('Failed to upsert Instagram profile', error, { igId, profileData, errorCode: error.code, errorMessage: error.message })
+      log.error('Failed to upsert Instagram profile', error, { 
+        igId, 
+        profileData, 
+        errorCode: error.code, 
+        errorMessage: error.message,
+        errorDetails: error.details,
+        errorHint: error.hint,
+      })
       throw new Error(`Failed to upsert Instagram profile: ${error.message}`)
+    }
+
+    if (!data) {
+      log.error('Upsert returned no data', { igId, profileData })
+      throw new Error('Upsert operation returned no data')
     }
 
     log.info('Profile upserted successfully', { igId, connectedUserId: data?.connected_user_id })
