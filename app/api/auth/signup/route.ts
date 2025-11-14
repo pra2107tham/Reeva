@@ -39,6 +39,18 @@ export async function POST(request: NextRequest) {
       // Preserve redirect URL in email confirmation link
       const baseUrl = getBaseUrlFromRequest(request)
       const redirectParam = redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''
+      const emailRedirectUrl = `${baseUrl}/auth/callback?type=signup${redirectParam}`
+      
+      log.info('Signing up user with email redirect', {
+        email,
+        emailRedirectTo: emailRedirectUrl,
+        baseUrl,
+        hasRedirect: !!redirect,
+        envDevDomain: process.env.DEV_DOMAIN,
+        envNextPublicDevDomain: process.env.NEXT_PUBLIC_DEV_DOMAIN,
+        nodeEnv: process.env.NODE_ENV,
+      })
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -46,7 +58,7 @@ export async function POST(request: NextRequest) {
           data: {
             full_name: full_name.trim(),
           },
-          emailRedirectTo: `${baseUrl}/auth/callback?type=signup${redirectParam}`,
+          emailRedirectTo: emailRedirectUrl,
         },
       })
 
