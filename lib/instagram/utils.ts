@@ -54,37 +54,58 @@ export async function upsertInstagramProfile(
 
     log.info('Upserting profile data', { igId, hasUsername: !!profileData.username })
     
-    // Add timeout wrapper for database operations
-    const upsertPromise = supabase
-      .from('instagram_profiles')
-      .upsert(profileData, {
-        onConflict: 'ig_id',
-        ignoreDuplicates: false,
-      })
-      .select()
-      .single()
-    
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Database upsert timeout after 10 seconds')), 10000)
+    // Add timeout wrapper using Promise.race for serverless environments
+    // The global fetch timeout in createServiceClient will also catch network timeouts
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Database upsert timeout after 10 seconds'))
+      }, 10000)
     })
     
-    log.info('Starting database upsert query', { igId })
-    let result
+    log.info('Starting database upsert query', { igId, timestamp: new Date().toISOString() })
+    let data, error
     try {
-      result = await Promise.race([upsertPromise, timeoutPromise])
-      log.info('Database upsert query completed', { igId })
-    } catch (timeoutError: any) {
-      if (timeoutError.message?.includes('timeout')) {
-        log.error('Database upsert timed out', timeoutError, { igId, profileData })
-        throw new Error(`Database operation timed out: ${timeoutError.message}`)
+      const queryPromise = supabase
+        .from('instagram_profiles')
+        .upsert(profileData, {
+          onConflict: 'ig_id',
+          ignoreDuplicates: false,
+        })
+        .select()
+        .single()
+      
+      // Race between query and timeout
+      const result = await Promise.race([queryPromise, timeoutPromise])
+      
+      log.info('Database upsert query completed', { igId, timestamp: new Date().toISOString() })
+      
+      data = result.data
+      error = result.error
+      
+      log.info('Database upsert result parsed', { igId, hasData: !!data, hasError: !!error })
+    } catch (queryError: any) {
+      // Check if it was a timeout
+      if (queryError.message?.includes('timeout')) {
+        log.error('Database upsert timed out', queryError, { igId, profileData, timestamp: new Date().toISOString() })
+        throw new Error('Database operation timed out after 10 seconds')
       }
-      log.error('Database upsert query failed', timeoutError, { igId, errorMessage: timeoutError?.message })
-      throw timeoutError
+      
+      // If error is thrown but we have result, extract data/error from it
+      if (queryError.data !== undefined || queryError.error !== undefined) {
+        data = queryError.data
+        error = queryError.error
+        log.info('Database upsert result extracted from error', { igId, hasData: !!data, hasError: !!error })
+      } else {
+        log.error('Database upsert query failed', queryError, { 
+          igId, 
+          errorMessage: queryError?.message,
+          errorName: queryError?.name,
+          errorStack: queryError?.stack,
+          timestamp: new Date().toISOString(),
+        })
+        throw queryError
+      }
     }
-    
-    log.info('Parsing database upsert result', { igId, hasResult: !!result })
-    const { data, error } = result as any
-    log.info('Database upsert result parsed', { igId, hasData: !!data, hasError: !!error })
 
     if (error) {
       log.error('Failed to upsert Instagram profile', error, { 
