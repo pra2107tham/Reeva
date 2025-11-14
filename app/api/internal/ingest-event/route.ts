@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { send } from '@vercel/queue'
 import { createLogger } from '@/lib/logger'
-import { IncomingMessagingEvent } from '@/lib/instagram/ingestion'
+import { handleIncomingMessagingEvent, IncomingMessagingEvent } from '@/lib/instagram/ingestion'
 
 const log = createLogger('Internal:IngestEvent')
 
@@ -9,7 +8,6 @@ const log = createLogger('Internal:IngestEvent')
  * POST /api/internal/ingest-event
  * 
  * Internal endpoint for ingesting parsed messaging events from webhook handler
- * Enqueues events to Vercel Queue for background processing
  * Requires service token authentication
  */
 export async function POST(request: NextRequest) {
@@ -46,66 +44,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Always use Vercel Queue (works in all environments including local dev)
-    // If queue fails, fall back to direct processing
-    const isLocalDev = !process.env.VERCEL_ENV || process.env.VERCEL_ENV === 'development'
+    // Process event asynchronously (don't block webhook response)
+    // In serverless, we need to ensure the execution context stays alive
+    // Use a promise that doesn't block but ensures context stays alive
+    const processingPromise = handleIncomingMessagingEvent(event).catch((error) => {
+      log.error('Failed to process event', error, { mid: event.mid })
+    })
     
-    try {
-      await send('instagram-ingestion', event)
-      
-      log.info('Event enqueued successfully', { mid: event.mid })
-      
-      // In local dev, trigger queue consumer manually since callbacks don't work
-      if (isLocalDev) {
-        const pollUrl = `${request.nextUrl.origin}/api/queues/instagram-ingestion`
-        log.info('Triggering queue consumer manually (local dev)', { 
-          mid: event.mid,
-          pollUrl 
-        })
-        
-        // Trigger queue consumer asynchronously (don't block response)
-        fetch(pollUrl, {
-          method: 'GET',
-        })
-        .then((response) => {
-          log.info('Queue polling trigger succeeded', { 
-            mid: event.mid,
-            status: response.status,
-            statusText: response.statusText 
-          })
-        })
-        .catch((pollError) => {
-          log.error('Queue polling trigger failed', pollError, { 
-            mid: event.mid,
-            pollUrl 
-          })
-        })
-      }
-      
-      return NextResponse.json(
-        { success: true, message: 'Event enqueued for processing' },
-        { status: 200 }
-      )
-    } catch (queueError: any) {
-      // Queue failed - fall back to direct processing
-      log.error('Failed to enqueue event, falling back to direct processing', queueError, { 
-        mid: event.mid 
-      })
-      
-      // Fallback: process directly
-      // Import dynamically to avoid circular dependencies
-      const { handleIncomingMessagingEvent } = await import('@/lib/instagram/ingestion')
-      
-      // Process in background (fire and forget)
-      handleIncomingMessagingEvent(event).catch((error) => {
-        log.error('Fallback processing failed', error, { mid: event.mid })
-      })
-      
-      return NextResponse.json(
-        { success: true, message: 'Event accepted (fallback mode)' },
-        { status: 200 }
-      )
-    }
+    // Attach to response to keep context alive (Next.js will wait for it)
+    // But don't await - return immediately
+    processingPromise.catch(() => {
+      // Already logged above
+    })
+
+    // Return success immediately (don't await processing)
+    return NextResponse.json(
+      { success: true, message: 'Event accepted for processing' },
+      { status: 200 }
+    )
   } catch (error: any) {
     log.error('Unexpected error in ingest-event', error)
     return NextResponse.json(

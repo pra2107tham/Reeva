@@ -12,7 +12,6 @@
     "@motionone/dom": "^10.18.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.81.1",
-    "@vercel/queue": "^0.0.0-alpha.28",
     "next": "16.0.1",
     "pino": "^10.1.0",
     "react": "19.2.0",
