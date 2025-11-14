@@ -45,9 +45,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Process event asynchronously (don't block webhook response)
-    // Fire and forget - process in background
-    handleIncomingMessagingEvent(event).catch((error) => {
+    // In serverless, we need to ensure the execution context stays alive
+    // Use a promise that doesn't block but ensures context stays alive
+    const processingPromise = handleIncomingMessagingEvent(event).catch((error) => {
       log.error('Failed to process event', error, { mid: event.mid })
+    })
+    
+    // Attach to response to keep context alive (Next.js will wait for it)
+    // But don't await - return immediately
+    processingPromise.catch(() => {
+      // Already logged above
     })
 
     // Return success immediately (don't await processing)

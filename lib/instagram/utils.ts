@@ -54,76 +54,76 @@ export async function upsertInstagramProfile(
 
     log.info('Upserting profile data', { igId, hasUsername: !!profileData.username })
     
-    // Add timeout wrapper using Promise.race for serverless environments
-    // The global fetch timeout in createServiceClient will also catch network timeouts
+    log.info('Starting database upsert query', { igId, timestamp: new Date().toISOString() })
+    
+    // Execute the query with explicit timeout wrapper for serverless environments
+    // Supabase has default statement timeouts, but we add an extra layer of protection
+    const queryPromise = supabase
+      .from('instagram_profiles')
+      .upsert(profileData, {
+        onConflict: 'ig_id',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single()
+    
+    // Add timeout wrapper (10 seconds) - Supabase service role has longer timeout but we add safety
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Database upsert timeout after 10 seconds'))
       }, 10000)
     })
     
-    log.info('Starting database upsert query', { igId, timestamp: new Date().toISOString() })
     let data, error
     try {
-      const queryPromise = supabase
-        .from('instagram_profiles')
-        .upsert(profileData, {
-          onConflict: 'ig_id',
-          ignoreDuplicates: false,
-        })
-        .select()
-        .single()
-      
-      // Race between query and timeout
       const result = await Promise.race([queryPromise, timeoutPromise])
-      
-      log.info('Database upsert query completed', { igId, timestamp: new Date().toISOString() })
-      
       data = result.data
       error = result.error
       
-      log.info('Database upsert result parsed', { igId, hasData: !!data, hasError: !!error })
-    } catch (queryError: any) {
-      // Check if it was a timeout
-      if (queryError.message?.includes('timeout')) {
-        log.error('Database upsert timed out', queryError, { igId, profileData, timestamp: new Date().toISOString() })
+      log.info('Database upsert query completed', { 
+        igId, 
+        timestamp: new Date().toISOString(),
+        hasData: !!data,
+        hasError: !!error,
+      })
+    } catch (timeoutError: any) {
+      if (timeoutError.message?.includes('timeout')) {
+        log.error('Database upsert timed out', timeoutError, { 
+          igId, 
+          profileData, 
+          timestamp: new Date().toISOString() 
+        })
         throw new Error('Database operation timed out after 10 seconds')
       }
-      
-      // If error is thrown but we have result, extract data/error from it
-      if (queryError.data !== undefined || queryError.error !== undefined) {
-        data = queryError.data
-        error = queryError.error
-        log.info('Database upsert result extracted from error', { igId, hasData: !!data, hasError: !!error })
-      } else {
-        log.error('Database upsert query failed', queryError, { 
-          igId, 
-          errorMessage: queryError?.message,
-          errorName: queryError?.name,
-          errorStack: queryError?.stack,
-          timestamp: new Date().toISOString(),
-        })
-        throw queryError
-      }
+      // If it's not a timeout, it might be the actual query result wrapped in error
+      // Supabase queries don't throw - they return { data, error }
+      // So if we get here, it's likely a real error
+      log.error('Database upsert query failed unexpectedly', timeoutError, {
+        igId,
+        errorMessage: timeoutError?.message,
+        errorName: timeoutError?.name,
+      })
+      throw timeoutError
     }
-
+    
     if (error) {
-      log.error('Failed to upsert Instagram profile', error, { 
+      log.error('Database upsert returned error', error, { 
         igId, 
         profileData, 
         errorCode: error.code, 
         errorMessage: error.message,
         errorDetails: error.details,
         errorHint: error.hint,
+        timestamp: new Date().toISOString(),
       })
       throw new Error(`Failed to upsert Instagram profile: ${error.message}`)
     }
-
+    
     if (!data) {
-      log.error('Upsert returned no data', { igId, profileData })
+      log.error('Upsert returned no data', { igId, profileData, timestamp: new Date().toISOString() })
       throw new Error('Upsert operation returned no data')
     }
-
+    
     log.info('Profile upserted successfully', { igId, connectedUserId: data?.connected_user_id })
     return data as InstagramProfileRow
   } catch (error: any) {

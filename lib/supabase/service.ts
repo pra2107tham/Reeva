@@ -33,7 +33,7 @@ export function createServiceClient() {
   })
 
   // Create client with service role key - this bypasses RLS automatically
-  // Add global fetch timeout for serverless environments
+  // Configure for serverless environments with proper timeouts
   return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
@@ -44,17 +44,28 @@ export function createServiceClient() {
       schema: 'public'
     },
     // Add global fetch with timeout for serverless environments
+    // This ensures all Supabase requests have a timeout
     global: {
-      fetch: (url, options = {}) => {
+      fetch: async (url, options = {}) => {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second global timeout
+        const timeoutId = setTimeout(() => {
+          controller.abort()
+        }, 12000) // 12 second timeout (less than our 15s to catch it)
         
-        return fetch(url, {
+        try {
+          const response = await fetch(url, {
           ...options,
           signal: controller.signal,
-        }).finally(() => {
-          clearTimeout(timeoutId)
         })
+        clearTimeout(timeoutId)
+        return response
+        } catch (error: any) {
+          clearTimeout(timeoutId)
+          if (error.name === 'AbortError') {
+            throw new Error(`Supabase request timed out after 12 seconds: ${url}`)
+          }
+          throw error
+        }
       }
     }
   })
