@@ -39,32 +39,40 @@ export async function upsertInstagramProfile(
   igId: string,
   partialMeta?: InstagramProfileMeta
 ): Promise<InstagramProfileRow> {
-  const supabase = createServiceClient()
-  
-  const profileData: any = {
-    ig_id: igId,
-    updated_at: new Date().toISOString(),
+  try {
+    log.info('Creating Supabase service client for profile upsert', { igId })
+    const supabase = createServiceClient()
+    
+    const profileData: any = {
+      ig_id: igId,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (partialMeta?.username) profileData.username = partialMeta.username
+    if (partialMeta?.display_name) profileData.display_name = partialMeta.display_name
+    if (partialMeta?.profile_pic_url) profileData.profile_pic_url = partialMeta.profile_pic_url
+
+    log.info('Upserting profile data', { igId, hasUsername: !!profileData.username })
+    const { data, error } = await supabase
+      .from('instagram_profiles')
+      .upsert(profileData, {
+        onConflict: 'ig_id',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      log.error('Failed to upsert Instagram profile', error, { igId, profileData, errorCode: error.code, errorMessage: error.message })
+      throw new Error(`Failed to upsert Instagram profile: ${error.message}`)
+    }
+
+    log.info('Profile upserted successfully', { igId, connectedUserId: data?.connected_user_id })
+    return data as InstagramProfileRow
+  } catch (error: any) {
+    log.error('Exception in upsertInstagramProfile', error, { igId, errorMessage: error?.message, errorStack: error?.stack })
+    throw error
   }
-
-  if (partialMeta?.username) profileData.username = partialMeta.username
-  if (partialMeta?.display_name) profileData.display_name = partialMeta.display_name
-  if (partialMeta?.profile_pic_url) profileData.profile_pic_url = partialMeta.profile_pic_url
-
-  const { data, error } = await supabase
-    .from('instagram_profiles')
-    .upsert(profileData, {
-      onConflict: 'ig_id',
-      ignoreDuplicates: false,
-    })
-    .select()
-    .single()
-
-  if (error) {
-    log.error('Failed to upsert Instagram profile', error, { igId })
-    throw new Error(`Failed to upsert Instagram profile: ${error.message}`)
-  }
-
-  return data as InstagramProfileRow
 }
 
 /**
