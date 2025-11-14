@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createLogger } from '@/lib/logger'
+import { getBaseUrlFromRequest } from '@/lib/utils/url'
 
 const log = createLogger('Auth:Signup')
 
@@ -13,7 +14,8 @@ const log = createLogger('Auth:Signup')
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, full_name, provider = 'email' } = await request.json()
+    const body = await request.json()
+    const { email, password, full_name, provider = 'email', redirect } = body
 
     const supabase = createServiceClient()
 
@@ -34,6 +36,21 @@ export async function POST(request: NextRequest) {
       }
 
       // Sign up user with email and password
+      // Preserve redirect URL in email confirmation link
+      const baseUrl = getBaseUrlFromRequest(request)
+      const redirectParam = redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''
+      const emailRedirectUrl = `${baseUrl}/auth/callback?type=signup${redirectParam}`
+      
+      log.info('Signing up user with email redirect', {
+        email,
+        emailRedirectTo: emailRedirectUrl,
+        baseUrl,
+        hasRedirect: !!redirect,
+        envDevDomain: process.env.DEV_DOMAIN,
+        envNextPublicDevDomain: process.env.NEXT_PUBLIC_DEV_DOMAIN,
+        nodeEnv: process.env.NODE_ENV,
+      })
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -41,7 +58,7 @@ export async function POST(request: NextRequest) {
           data: {
             full_name: full_name.trim(),
           },
-          emailRedirectTo: `${request.nextUrl.origin}/auth/callback?type=signup`,
+          emailRedirectTo: emailRedirectUrl,
         },
       })
 
@@ -74,10 +91,15 @@ export async function POST(request: NextRequest) {
 
     // For Google OAuth
     if (provider === 'google') {
+      const baseUrl = getBaseUrlFromRequest(request)
+      const redirectTo = redirect 
+        ? `${baseUrl}/auth/callback?redirect=${encodeURIComponent(redirect)}`
+        : `${baseUrl}/auth/callback`
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${request.nextUrl.origin}/api/auth/callback`,
+          redirectTo,
         },
       })
 

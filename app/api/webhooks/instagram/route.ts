@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createLogger } from '@/lib/logger'
+import { parseMessagingEvents, forwardToInternalIngestion } from '@/lib/instagram/webhook-parser'
 
 const log = createLogger('Webhook:Instagram')
 
@@ -114,43 +115,41 @@ export async function POST(request: NextRequest) {
     //   ]
     // }
 
-    // Handle test webhook format (from Meta Developer App panel)
-    if (body.field && body.value) {
-      const value = body.value
-      log.info('Test webhook received', {
-        field: body.field,
-        senderId: value.sender?.id,
-        recipientId: value.recipient?.id,
-        timestamp: value.timestamp,
-        messageId: value.message?.mid,
-        messageText: value.message?.text,
-        fullPayload: body,
+    // Parse messaging events from webhook payload
+    const events = parseMessagingEvents(body)
+
+    if (events.length > 0) {
+      log.info('Parsed messaging events', { eventCount: events.length })
+      
+      // Forward events to internal ingestion endpoint (async, don't block response)
+      forwardToInternalIngestion(events).catch((error) => {
+        log.error('Failed to forward events to internal endpoint', error)
       })
-      return new NextResponse('OK', {
-        status: 200,
-      })
-    }
-    
-    // Handle actual Instagram webhook format
-    if (body.object === 'instagram') {
-      const entries = body.entry || []
-      log.info('Instagram webhook received', {
-        entryCount: entries.length,
-        entries: entries.map((entry: any) => ({
-          id: entry.id,
-          time: entry.time,
-          messagingCount: entry.messaging?.length || 0,
-          changesCount: entry.changes?.length || 0,
-          mentionsCount: entry.mentions?.length || 0,
-          storyMentionsCount: entry.story_mentions?.length || 0,
-          fullEntry: entry,
-        })),
-        fullPayload: body,
-      })
-    } else if (body.object) {
-      log.warn('Unknown object type', { object: body.object, payload: body })
     } else {
-      log.warn('No recognized webhook format detected', { payload: body })
+      // Log non-messaging webhooks
+      if (body.field && body.value) {
+        log.info('Test webhook received (non-messaging)', {
+          field: body.field,
+          fullPayload: body,
+        })
+      } else if (body.object === 'instagram') {
+        const entries = body.entry || []
+        log.info('Instagram webhook received (non-messaging)', {
+          entryCount: entries.length,
+          entries: entries.map((entry: any) => ({
+            id: entry.id,
+            time: entry.time,
+            messagingCount: entry.messaging?.length || 0,
+            changesCount: entry.changes?.length || 0,
+            mentionsCount: entry.mentions?.length || 0,
+            storyMentionsCount: entry.story_mentions?.length || 0,
+          })),
+        })
+      } else if (body.object) {
+        log.warn('Unknown object type', { object: body.object, payload: body })
+      } else {
+        log.warn('No recognized webhook format detected', { payload: body })
+      }
     }
     
     return new NextResponse('OK', {

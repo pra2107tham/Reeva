@@ -492,14 +492,14 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																							</SmartComponentScopedContainer>
 																						</ComponentViewportProvider>
 																					)}
-																					<motion.div
-																						className={"framer-1nloz4o"}
-																						data-framer-name={"Title"}
-																						layoutDependency={
-																							layoutDependency
-																						}
-																						layoutId={"tr0hch_1I"}
-																					>
+																						<motion.div
+																							className={"framer-1nloz4o"}
+																							data-framer-name={"Title"}
+																							layoutDependency={
+																								layoutDependency
+																							}
+																							layoutId={"tr0hch_1I"}
+																						>
 																							<RichText
 																								__fromCanvasComponent={true}
 																								className={"framer-fizo4p"}
@@ -635,12 +635,12 @@ var Component = /* @__PURE__ */ React.forwardRef(function (props, ref) {
 																				</motion.div>
 																			</motion.div>
 																		</motion.div>
-																		<motion.div
-																			className={"framer-1uj1jec"}
-																			data-framer-name={"Bottom"}
-																			layoutDependency={layoutDependency}
-																			layoutId={"IlayY1Mjl"}
-																		>
+																			<motion.div
+																				className={"framer-1uj1jec"}
+																				data-framer-name={"Bottom"}
+																				layoutDependency={layoutDependency}
+																				layoutId={"IlayY1Mjl"}
+																			>
 																				<RichText
 																					__fromCanvasComponent={true}
 																					className={"framer-1jsooxm"}

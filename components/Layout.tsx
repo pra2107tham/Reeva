@@ -29,10 +29,10 @@ export default function Layout({
         <NavBar.Responsive style={{ width: '100%'}} activePage={getActivePage()} />
       </div>
       <div style={style}>
-        {children}
+      {children}
       </div>
       <div style={{ position: "relative", zIndex: 10 }}>
-        <Footer.Responsive style={{ width: '100%'}} />
+      <Footer.Responsive style={{ width: '100%'}} />
       </div>
     </div>
   )

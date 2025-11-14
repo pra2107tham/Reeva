@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createLogger } from '@/lib/logger'
+import { getBaseUrlFromRequest } from '@/lib/utils/url'
 
 const log = createLogger('Auth:Login')
 
@@ -13,7 +14,8 @@ const log = createLogger('Auth:Login')
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, provider = 'email' } = await request.json()
+    const body = await request.json()
+    const { email, password, provider = 'email', redirect } = body
 
     // Create server client with proper cookie handling for API routes
     let response = NextResponse.next({
@@ -131,10 +133,15 @@ export async function POST(request: NextRequest) {
 
     // For Google OAuth
     if (provider === 'google') {
+      const baseUrl = getBaseUrlFromRequest(request)
+      const redirectTo = redirect 
+        ? `${baseUrl}/auth/callback?redirect=${encodeURIComponent(redirect)}`
+        : `${baseUrl}/auth/callback`
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${request.nextUrl.origin}/api/auth/callback`,
+          redirectTo,
         },
       })
 
