@@ -1,0 +1,12 @@
+{
+  "queues": {
+    "instagram-ingestion": {
+      "consumer": {
+        "url": "/api/queues/instagram-ingestion",
+        "maxBatchSize": 10,
+        "maxBatchTimeout": 5
+      }
+    }
+  }
+}
+
