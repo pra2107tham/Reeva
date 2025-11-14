@@ -8,30 +8,33 @@
  * Client-side code can use NEXT_PUBLIC_ prefixed vars
  */
 export function getBaseUrl(): string {
-  // Debug: Log what we're getting
-  const devDomainRaw = process.env.DEV_DOMAIN
-  const nextPublicDevDomainRaw = process.env.NEXT_PUBLIC_DEV_DOMAIN
-  const nodeEnv = process.env.NODE_ENV
+  const nodeEnv = process.env.NODE_ENV || 'development'
+  const isProduction = nodeEnv === 'production'
   
-  // Always check for production domain first (if set, use it)
-  // Check both prefixed and non-prefixed versions
-  const productionDomain = process.env.PRODUCTION_DOMAIN || process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN
-  
-  if (productionDomain && productionDomain !== 'https://your-production-domain.com' && productionDomain.trim() !== '') {
-    return productionDomain.trim()
+  if (isProduction) {
+    // In production, use production domain
+    // Check both prefixed and non-prefixed versions
+    const productionDomain = process.env.PRODUCTION_DOMAIN || process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN
+    
+    if (productionDomain && productionDomain !== 'https://your-production-domain.com' && productionDomain.trim() !== '') {
+      return productionDomain.trim()
+    }
+    
+    // If no production domain configured, return empty string (should be configured!)
+    return ''
+  } else {
+    // In development, use dev domain
+    // Check both prefixed and non-prefixed versions
+    // Prioritize non-prefixed for server-side (available in API routes)
+    const devDomain = process.env.DEV_DOMAIN || process.env.NEXT_PUBLIC_DEV_DOMAIN
+    
+    if (devDomain && devDomain.trim() !== '') {
+      return devDomain.trim()
+    }
+    
+    // Fallback: use ngrok in development
+    return 'https://c702be487ed4.ngrok-free.app'
   }
-  
-  // Then check for dev domain (check both prefixed and non-prefixed)
-  // Prioritize non-prefixed for server-side (available in API routes)
-  const devDomain = process.env.DEV_DOMAIN || process.env.NEXT_PUBLIC_DEV_DOMAIN
-  
-  if (devDomain && devDomain.trim() !== '') {
-    return devDomain.trim()
-  }
-  
-  // Fallback: use ngrok in development, empty string in production
-  const isDev = process.env.NODE_ENV === 'development'
-  return isDev ? 'https://c702be487ed4.ngrok-free.app' : ''
 }
 
 /**
