@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
     if (instagramApiBaseUrl && instagramAccessToken) {
       try {
         log.info('Fetching Instagram profile details', { ig_id })
-        // Note: Only id and username are available for messaging user IDs (IGBusinessScopedID)
-        // display_name and profile_pic_url are not available for messaging user IDs
-        const profileUrl = `${instagramApiBaseUrl}/${ig_id}?fields=id,username`
+        // Query user ID directly to get name and profile_pic
+        // Fields: id, username, name (maps to display_name), profile_pic (maps to profile_pic_url)
+        const profileUrl = `${instagramApiBaseUrl}/${ig_id}?fields=id,username,name,profile_pic`
         const profileResponse = await fetch(profileUrl, {
           headers: {
             Authorization: `Bearer ${instagramAccessToken}`,
@@ -97,11 +97,16 @@ export async function POST(request: NextRequest) {
         if (profileResponse.ok) {
           const profileJson = await profileResponse.json()
           profileData.username = profileJson.username || null
-          // Note: display_name and profile_pic_url are not available for messaging user IDs
-          // They're only available for Instagram Business Account IDs
+          // Map 'name' from API to 'display_name' in database
+          profileData.display_name = profileJson.name || null
+          // Map 'profile_pic' from API to 'profile_pic_url' in database
+          profileData.profile_pic_url = profileJson.profile_pic || null
+          
           log.info('Instagram profile details fetched', {
             ig_id,
             username: profileData.username,
+            hasDisplayName: !!profileData.display_name,
+            hasProfilePic: !!profileData.profile_pic_url,
           })
         } else {
           const errorText = await profileResponse.text()

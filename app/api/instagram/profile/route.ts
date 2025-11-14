@@ -31,10 +31,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Instagram Graph API endpoint for messaging users (IGBusinessScopedID)
-    // Note: profile_picture_url and name are not available for messaging user IDs
-    // Only id and username are available for scoped IDs
-    const url = `${apiBaseUrl}/${igId}?fields=id,username`
+    // Instagram Graph API endpoint - query user ID directly
+    // Fields: id, username, name, profile_pic
+    // Note: Requires instagram_business_basic permission
+    const url = `${apiBaseUrl}/${igId}?fields=id,username,name,profile_pic`
 
     log.debug('Fetching Instagram profile', { igId, url })
 
@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
     log.info('Instagram profile fetched successfully', { 
       igId, 
       username: data.username,
+      hasName: !!data.name,
+      hasProfilePic: !!data.profile_pic,
     })
 
     return NextResponse.json({
@@ -77,8 +79,8 @@ export async function GET(request: NextRequest) {
       profile: {
         id: data.id || igId,
         username: data.username || null,
-        name: null, // Not available for messaging user IDs
-        profile_picture_url: null, // Not available for messaging user IDs
+        name: data.name || null, // Maps to display_name in database
+        profile_picture_url: data.profile_pic || null, // Maps to profile_pic_url in database
       },
     })
   } catch (error: any) {
