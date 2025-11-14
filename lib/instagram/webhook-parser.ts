@@ -1,8 +1,26 @@
 import { createLogger } from '@/lib/logger'
 import { getBaseUrl } from '@/lib/utils/url'
+import { Client } from '@upstash/qstash'
 import { IncomingMessagingEvent } from './ingestion'
 
 const log = createLogger('Instagram:WebhookParser')
+
+/**
+ * Initialize QStash client
+ */
+function getQStashClient(): Client {
+  const qstashToken = process.env.QSTASH_TOKEN
+  const qstashUrl = process.env.QSTASH_URL
+
+  if (!qstashToken) {
+    throw new Error('QSTASH_TOKEN not configured')
+  }
+
+  return new Client({
+    token: qstashToken,
+    ...(qstashUrl && { baseUrl: qstashUrl }),
+  })
+}
 
 /**
  * Parse webhook payload and extract messaging events
@@ -58,115 +76,80 @@ export function parseMessagingEvents(body: any): IncomingMessagingEvent[] {
 }
 
 /**
- * Forward parsed events to internal ingestion endpoint
+ * Publish events directly to QStash (bypassing internal endpoint)
+ * This avoids self-referencing HTTP calls and potential hanging issues
  */
 export async function forwardToInternalIngestion(events: IncomingMessagingEvent[]): Promise<void> {
-  // Use INTERNAL_INGEST_URL if explicitly set, otherwise construct from base URL
-  const baseUrl = process.env.INTERNAL_INGEST_URL || getBaseUrl()
-  const internalUrl = baseUrl 
-    ? `${baseUrl}/api/internal/ingest-event`
-    : 'http://localhost:3000/api/internal/ingest-event' // Fallback for local dev without env vars
-  
-  const serviceToken = process.env.INTERNAL_SERVICE_TOKEN
+  const baseUrl = getBaseUrl()
+  const consumerUrl = baseUrl 
+    ? `${baseUrl}/api/qstash/instagram-ingestion`
+    : 'http://localhost:3000/api/qstash/instagram-ingestion' // Fallback for local dev
 
-  if (!serviceToken) {
-    log.error('INTERNAL_SERVICE_TOKEN not configured - cannot forward events')
-    throw new Error('INTERNAL_SERVICE_TOKEN not configured')
+  if (!baseUrl) {
+    log.error('Base URL not configured - cannot publish to QStash')
+    throw new Error('Base URL not configured')
   }
 
-  log.info('Forwarding events to internal endpoint', {
-    internalUrl,
+  log.info('Publishing events directly to QStash', {
+    consumerUrl,
     eventCount: events.length,
     baseUrl,
     eventMids: events.map(e => e.mid),
   })
 
-  // Forward each event asynchronously (fire-and-forget)
-  // Since we're using QStash, we don't need to wait for the internal endpoint
-  // The internal endpoint will enqueue to QStash, which handles delivery asynchronously
-  // This ensures webhook handler returns immediately
+  // Publish each event directly to QStash (fire-and-forget)
+  // This avoids the self-referencing HTTP call issue
   for (const event of events) {
-    // Fire and forget - don't await, just start the request
+    // Fire and forget - don't await, just start the publish
     // This ensures webhook handler returns immediately
-    const forwardPromise = (async () => {
+    const publishPromise = (async () => {
       try {
-        log.info('Forwarding event to internal endpoint', {
+        log.info('Publishing event to QStash', {
           mid: event.mid,
           senderIgId: event.sender_ig_id,
-          internalUrl,
+          consumerUrl,
         })
         
         const startTime = Date.now()
+        const qstash = getQStashClient()
         
-        // Add timeout to fetch (5 seconds) - very short timeout since we're fire-and-forget
-        // If it times out, QStash will handle retries anyway
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => {
-          controller.abort()
-        }, 5000)
-        
-        try {
-          const response = await fetch(internalUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-service-token': serviceToken,
-            },
-            body: JSON.stringify(event),
-            signal: controller.signal,
-          })
-          
-          clearTimeout(timeoutId)
-          const duration = Date.now() - startTime
-
-          if (!response.ok) {
-            const errorText = await response.text()
-            log.error('Internal endpoint returned error', new Error(errorText), {
-              mid: event.mid,
-              status: response.status,
-              internalUrl,
-              duration,
-            })
-          } else {
-            log.info('Event forwarded successfully', {
-              mid: event.mid,
-              status: response.status,
-              duration,
-            })
-          }
-        } catch (fetchError: any) {
-          clearTimeout(timeoutId)
-          const duration = Date.now() - startTime
-          
-          if (fetchError.name === 'AbortError') {
-            log.warn('Forwarding event timed out (fire-and-forget)', {
-              mid: event.mid,
-              internalUrl,
-              duration,
-              timeout: '5s',
-              note: 'QStash will handle retries if needed',
-            })
-          } else {
-            log.error('Failed to forward event to internal endpoint', fetchError, {
-              mid: event.mid,
-              internalUrl,
-              duration,
-              errorMessage: fetchError.message,
-            })
-          }
-        }
-      } catch (error) {
-        log.error('Unexpected error forwarding event', error, {
-          mid: event.mid,
-          internalUrl,
-          errorMessage: error instanceof Error ? error.message : String(error),
+        // Publish directly to QStash consumer endpoint
+        const messageId = await qstash.publishJSON({
+          url: consumerUrl,
+          body: event,
+          // Deduplication: Use Instagram message ID to prevent duplicate processing
+          deduplicationId: `ig_msg_${event.mid}`,
+          // Retries: Configure explicit retries
+          retries: 3,
+          // Label: Add label for better log filtering
+          label: 'instagram-messaging-event',
+          // Timeout: Set timeout for message processing (30 seconds)
+          timeout: 30,
         })
+        
+        const duration = Date.now() - startTime
+        
+        log.info('Event published to QStash successfully', {
+          mid: event.mid,
+          messageId: messageId.messageId,
+          duration,
+          consumerUrl,
+        })
+      } catch (publishError: any) {
+        log.error('Failed to publish event to QStash', publishError, {
+          mid: event.mid,
+          consumerUrl,
+          errorMessage: publishError.message,
+          errorName: publishError.name,
+        })
+        // Don't throw - webhook handler should still return 200
+        // QStash will handle retries if needed
       }
     })()
     
     // Don't await - fire and forget
     // Errors are logged but don't block the webhook response
-    forwardPromise.catch(() => {
+    publishPromise.catch(() => {
       // Already logged above
     })
   }
