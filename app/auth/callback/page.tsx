@@ -135,6 +135,9 @@ function AuthCallbackContent() {
           // Clear the hash from URL
           window.history.replaceState(null, '', window.location.pathname + window.location.search)
 
+          // Check for redirect URL
+          const redirectUrl = searchParams.get('redirect')
+          
           // Create profile after email confirmation via API route
           if (sessionData?.user) {
             try {
@@ -157,8 +160,10 @@ function AuthCallbackContent() {
             }
           }
 
-          // Redirect based on type - use window.location for more reliable redirect
-          if (type === 'signup') {
+          // Redirect based on type or redirect URL - use window.location for more reliable redirect
+          if (redirectUrl) {
+            window.location.href = redirectUrl
+          } else if (type === 'signup') {
             window.location.href = '/login?success=' + encodeURIComponent('Email confirmed! You can now login.')
           } else {
             window.location.href = '/profile'

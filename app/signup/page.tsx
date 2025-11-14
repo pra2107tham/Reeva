@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Layout from '@/components/Layout'
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -37,9 +39,14 @@ export default function SignupPage() {
       }
 
       setSuccess(true)
-      // Redirect to login after showing success message
+      // Redirect to login after showing success message, preserving redirect URL
+      const redirectUrl = searchParams.get('redirect')
       setTimeout(() => {
-        router.push('/login')
+        if (redirectUrl) {
+          router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`)
+        } else {
+          router.push('/login')
+        }
       }, 3000)
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -53,10 +60,14 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
+      const redirectUrl = searchParams.get('redirect')
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'google' }),
+        body: JSON.stringify({ 
+          provider: 'google',
+          redirect: redirectUrl || undefined,
+        }),
       })
 
       const data = await response.json()
@@ -77,9 +88,16 @@ export default function SignupPage() {
   }
 
   return (
+    <Layout>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px 20px 20px' }}>
         <div style={{ maxWidth: '400px', width: '100%', background: 'rgba(255, 255, 255, 0.05)', padding: '40px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <h1 style={{ color: '#fff', marginBottom: '30px', fontSize: '28px', textAlign: 'center' }}>Sign Up</h1>
+
+          {searchParams.get('redirect') && (
+            <div style={{ background: 'rgba(79, 26, 214, 0.1)', border: '1px solid rgba(79, 26, 214, 0.3)', color: '#a78bfa', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
+              Create an account to link your Instagram profile with Reeva.
+            </div>
+          )}
 
           {error && (
             <div style={{ background: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', color: '#ff6b6b', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
@@ -214,5 +232,23 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
+    </Layout>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <Layout>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </Layout>
+    }>
+      <SignupContent />
+    </Suspense>
   )
 }

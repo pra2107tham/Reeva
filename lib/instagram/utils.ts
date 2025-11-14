@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { createLogger } from '@/lib/logger'
+import { getBaseUrl } from '@/lib/utils/url'
 import crypto from 'crypto'
 
 const log = createLogger('Instagram:Utils')
@@ -16,7 +17,7 @@ export interface MessageRow {
   recipient_ig_id: string
   message_text: string | null
   attachments: any | null
-  timestamp: string
+  received_at: string // Column name in database
   processed: boolean
 }
 
@@ -79,12 +80,34 @@ export async function insertMessageIfNotExists(
 ): Promise<MessageRow> {
   const supabase = createServiceClient()
 
+  // Instagram timestamps are in milliseconds (13 digits) or seconds (10 digits)
+  // Convert to milliseconds if needed, then to ISO string
+  // Ensure timestamp is a string for length check
+  const timestampStr = String(timestamp).trim()
+  const isMilliseconds = timestampStr.length >= 13
+  const timestampMs = isMilliseconds
+    ? parseInt(timestampStr, 10) // Already in milliseconds
+    : parseInt(timestampStr, 10) * 1000 // Convert seconds to milliseconds
+  
+  // Validate the timestamp is reasonable (not in the far future/past)
+  const date = new Date(timestampMs)
+  if (isNaN(date.getTime()) || date.getFullYear() > 2100 || date.getFullYear() < 2020) {
+    log.error('Invalid timestamp conversion', {
+      originalTimestamp: timestamp,
+      timestampStr,
+      timestampMs,
+      isMilliseconds,
+      resultingDate: date.toISOString(),
+    })
+    throw new Error(`Invalid timestamp: ${timestamp} (converted to ${timestampMs}ms)`)
+  }
+  
   const messageData: any = {
     id: mid,
     sender_ig_id: senderIgId,
     recipient_ig_id: recipientIgId,
     message_text: messageText,
-    timestamp: new Date(parseInt(timestamp) * 1000).toISOString(),
+    received_at: new Date(timestampMs).toISOString(), // Use received_at column
     processed: false,
   }
 
@@ -290,7 +313,8 @@ export async function sendVerificationDM(
   igId: string,
   tokenPlain: string
 ): Promise<{ remoteMessageId: string; outboundMessageId: string }> {
-  const verificationUrl = `https://reeva.app/verify?token=${encodeURIComponent(tokenPlain)}&ig_id=${encodeURIComponent(igId)}`
+  const baseUrl = getBaseUrl()
+  const verificationUrl = `${baseUrl}/verify?token=${encodeURIComponent(tokenPlain)}&ig_id=${encodeURIComponent(igId)}`
   const messageText = `Hey — welcome to Reeva! It looks like you haven't connected your Instagram account to Reeva yet. Click the link below to connect and view your saved reels and posts:\n\n${verificationUrl}`
 
   // Create outbound message tracking row

@@ -143,7 +143,7 @@ Instagram Webhook → Webhook Handler → Internal Ingestion Endpoint → Event 
 ```
 Hey — welcome to Reeva! It looks like you haven't connected your Instagram account to Reeva yet. Click the link below to connect and view your saved reels and posts:
 
-https://reeva.app/verify?token=<TOKEN>&ig_id=<IGID>
+https://c702be487ed4.ngrok-free.app/verify?token=<TOKEN>&ig_id=<IGID>
 ```
 
 ### Acknowledgement DM (Connected Users)

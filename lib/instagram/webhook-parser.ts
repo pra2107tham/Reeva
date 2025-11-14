@@ -17,7 +17,7 @@ export function parseMessagingEvents(body: any): IncomingMessagingEvent[] {
         mid: value.message.mid,
         sender_ig_id: value.sender?.id || '',
         recipient_ig_id: value.recipient?.id || '',
-        timestamp: value.timestamp || String(Date.now() / 1000),
+        timestamp: value.timestamp ? String(value.timestamp) : String(Date.now()),
         message_text: value.message.text || null,
         attachments: value.message.attachments || null,
       })
@@ -29,16 +29,25 @@ export function parseMessagingEvents(body: any): IncomingMessagingEvent[] {
     for (const entry of body.entry) {
       if (entry.messaging && Array.isArray(entry.messaging)) {
         for (const msg of entry.messaging) {
-          if (msg.message && msg.message.mid) {
-            events.push({
-              mid: msg.message.mid,
-              sender_ig_id: msg.sender?.id || '',
-              recipient_ig_id: msg.recipient?.id || '',
-              timestamp: msg.timestamp || String(Date.now() / 1000),
-              message_text: msg.message.text || null,
-              attachments: msg.message.attachments || null,
-            })
+          // Skip echo messages (messages we sent that Instagram echoes back)
+          if (msg.message && msg.message.is_echo === true) {
+            log.debug('Skipping echo message', { mid: msg.message.mid })
+            continue
           }
+          
+          // Skip read receipts and other non-message events
+          if (!msg.message || !msg.message.mid) {
+            continue
+          }
+          
+          events.push({
+            mid: msg.message.mid,
+            sender_ig_id: msg.sender?.id || '',
+            recipient_ig_id: msg.recipient?.id || '',
+            timestamp: msg.timestamp ? String(msg.timestamp) : String(Date.now()),
+            message_text: msg.message.text || null,
+            attachments: msg.message.attachments || null,
+          })
         }
       }
     }

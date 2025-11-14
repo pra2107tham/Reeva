@@ -47,8 +47,13 @@ function LoginContent() {
         return
       }
 
-      // Success - redirect to profile
-      router.push('/profile')
+      // Success - redirect to profile or redirect URL
+      const redirectUrl = searchParams.get('redirect')
+      if (redirectUrl) {
+        router.push(redirectUrl)
+      } else {
+        router.push('/profile')
+      }
       router.refresh()
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -63,10 +68,14 @@ function LoginContent() {
     setLoading(true)
 
     try {
+      const redirectUrl = searchParams.get('redirect')
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'google' }),
+        body: JSON.stringify({ 
+          provider: 'google',
+          redirect: redirectUrl || undefined,
+        }),
       })
 
       const data = await response.json()
