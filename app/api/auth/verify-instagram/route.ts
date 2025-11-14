@@ -80,12 +80,14 @@ export async function POST(request: NextRequest) {
     const instagramApiBaseUrl = process.env.INSTAGRAM_API_BASE_URL
     const instagramAccessToken = process.env.INSTAGRAM_ACCESS_TOKEN
     
-    let profileData: { username?: string; name?: string; profile_picture_url?: string } = {}
+    let profileData: { username?: string; display_name?: string; profile_pic_url?: string } = {}
     
     if (instagramApiBaseUrl && instagramAccessToken) {
       try {
         log.info('Fetching Instagram profile details', { ig_id })
-        const profileUrl = `${instagramApiBaseUrl}/${ig_id}?fields=id,username,name,profile_picture_url`
+        // Note: Only id and username are available for messaging user IDs (IGBusinessScopedID)
+        // display_name and profile_pic_url are not available for messaging user IDs
+        const profileUrl = `${instagramApiBaseUrl}/${ig_id}?fields=id,username`
         const profileResponse = await fetch(profileUrl, {
           headers: {
             Authorization: `Bearer ${instagramAccessToken}`,
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
         if (profileResponse.ok) {
           const profileJson = await profileResponse.json()
           profileData.username = profileJson.username || null
-          // Note: name and profile_picture_url are not available for messaging user IDs
+          // Note: display_name and profile_pic_url are not available for messaging user IDs
           // They're only available for Instagram Business Account IDs
           log.info('Instagram profile details fetched', {
             ig_id,
@@ -122,21 +124,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Link Instagram profile to user account and update profile data
+    // Note: Database columns are display_name and profile_pic_url (not name/profile_picture_url)
     const updateData: any = {
       connected_user_id: user.id,
       connected_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
 
-    // Add profile data if available
+    // Add profile data if available (using correct database column names)
     if (profileData.username) {
       updateData.username = profileData.username
     }
-    if (profileData.name) {
-      updateData.name = profileData.name
+    if (profileData.display_name) {
+      updateData.display_name = profileData.display_name
     }
-    if (profileData.profile_picture_url) {
-      updateData.profile_picture_url = profileData.profile_picture_url
+    if (profileData.profile_pic_url) {
+      updateData.profile_pic_url = profileData.profile_pic_url
     }
 
     const { error: updateError } = await serviceClient
@@ -157,8 +160,8 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       tokenId: tokenData.id,
       username: profileData.username,
-      hasDisplayName: !!profileData.name,
-      hasProfilePic: !!profileData.profile_picture_url,
+      hasDisplayName: !!profileData.display_name,
+      hasProfilePic: !!profileData.profile_pic_url,
     })
 
     return NextResponse.json({

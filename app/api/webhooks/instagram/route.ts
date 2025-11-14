@@ -122,9 +122,16 @@ export async function POST(request: NextRequest) {
       log.info('Parsed messaging events', { eventCount: events.length })
       
       // Forward events to internal ingestion endpoint (async, don't block response)
-      forwardToInternalIngestion(events).catch((error) => {
-        log.error('Failed to forward events to internal endpoint', error)
-      })
+      // Use Promise.resolve().then() to ensure it doesn't block the response
+      // but still catches errors properly
+      Promise.resolve()
+        .then(() => forwardToInternalIngestion(events))
+        .catch((error) => {
+          log.error('Failed to forward events to internal endpoint', error, {
+            eventCount: events.length,
+            eventMids: events.map(e => e.mid),
+          })
+        })
     } else {
       // Log non-messaging webhooks
       if (body.field && body.value) {

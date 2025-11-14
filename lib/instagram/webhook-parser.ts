@@ -81,79 +81,94 @@ export async function forwardToInternalIngestion(events: IncomingMessagingEvent[
     eventMids: events.map(e => e.mid),
   })
 
-  // Forward each event asynchronously
+  // Forward each event asynchronously (fire-and-forget)
+  // Since we're using QStash, we don't need to wait for the internal endpoint
+  // The internal endpoint will enqueue to QStash, which handles delivery asynchronously
+  // This ensures webhook handler returns immediately
   for (const event of events) {
-    try {
-      log.info('Forwarding event to internal endpoint', {
-        mid: event.mid,
-        senderIgId: event.sender_ig_id,
-        internalUrl,
-      })
-      
-      const startTime = Date.now()
-      
-      // Add timeout to fetch (15 seconds)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => {
-        controller.abort()
-      }, 15000)
-      
+    // Fire and forget - don't await, just start the request
+    // This ensures webhook handler returns immediately
+    const forwardPromise = (async () => {
       try {
-        const response = await fetch(internalUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-service-token': serviceToken,
-          },
-          body: JSON.stringify(event),
-          signal: controller.signal,
+        log.info('Forwarding event to internal endpoint', {
+          mid: event.mid,
+          senderIgId: event.sender_ig_id,
+          internalUrl,
         })
         
-        clearTimeout(timeoutId)
-        const duration = Date.now() - startTime
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          log.error('Internal endpoint returned error', new Error(errorText), {
-            mid: event.mid,
-            status: response.status,
-            internalUrl,
-            duration,
-          })
-        } else {
-          log.info('Event forwarded successfully', {
-            mid: event.mid,
-            status: response.status,
-            duration,
-          })
-        }
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId)
-        const duration = Date.now() - startTime
+        const startTime = Date.now()
         
-        if (fetchError.name === 'AbortError') {
-          log.error('Forwarding event timed out', fetchError, {
-            mid: event.mid,
-            internalUrl,
-            duration,
-            timeout: '15s',
+        // Add timeout to fetch (5 seconds) - very short timeout since we're fire-and-forget
+        // If it times out, QStash will handle retries anyway
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => {
+          controller.abort()
+        }, 5000)
+        
+        try {
+          const response = await fetch(internalUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-service-token': serviceToken,
+            },
+            body: JSON.stringify(event),
+            signal: controller.signal,
           })
-        } else {
-          log.error('Failed to forward event to internal endpoint', fetchError, {
-            mid: event.mid,
-            internalUrl,
-            duration,
-            errorMessage: fetchError.message,
-          })
+          
+          clearTimeout(timeoutId)
+          const duration = Date.now() - startTime
+
+          if (!response.ok) {
+            const errorText = await response.text()
+            log.error('Internal endpoint returned error', new Error(errorText), {
+              mid: event.mid,
+              status: response.status,
+              internalUrl,
+              duration,
+            })
+          } else {
+            log.info('Event forwarded successfully', {
+              mid: event.mid,
+              status: response.status,
+              duration,
+            })
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId)
+          const duration = Date.now() - startTime
+          
+          if (fetchError.name === 'AbortError') {
+            log.warn('Forwarding event timed out (fire-and-forget)', {
+              mid: event.mid,
+              internalUrl,
+              duration,
+              timeout: '5s',
+              note: 'QStash will handle retries if needed',
+            })
+          } else {
+            log.error('Failed to forward event to internal endpoint', fetchError, {
+              mid: event.mid,
+              internalUrl,
+              duration,
+              errorMessage: fetchError.message,
+            })
+          }
         }
+      } catch (error) {
+        log.error('Unexpected error forwarding event', error, {
+          mid: event.mid,
+          internalUrl,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
       }
-    } catch (error) {
-      log.error('Unexpected error forwarding event', error, {
-        mid: event.mid,
-        internalUrl,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      })
-    }
+    })()
+    
+    // Don't await - fire and forget
+    // Errors are logged but don't block the webhook response
+    forwardPromise.catch(() => {
+      // Already logged above
+    })
   }
 }
 
