@@ -74,36 +74,84 @@ export async function forwardToInternalIngestion(events: IncomingMessagingEvent[
     throw new Error('INTERNAL_SERVICE_TOKEN not configured')
   }
 
-  log.debug('Forwarding events to internal endpoint', {
+  log.info('Forwarding events to internal endpoint', {
     internalUrl,
     eventCount: events.length,
     baseUrl,
+    eventMids: events.map(e => e.mid),
   })
 
   // Forward each event asynchronously
   for (const event of events) {
     try {
-      const response = await fetch(internalUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-service-token': serviceToken,
-        },
-        body: JSON.stringify(event),
+      log.info('Forwarding event to internal endpoint', {
+        mid: event.mid,
+        senderIgId: event.sender_ig_id,
+        internalUrl,
       })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        log.error('Internal endpoint returned error', new Error(errorText), {
-          mid: event.mid,
-          status: response.status,
-          internalUrl,
+      
+      const startTime = Date.now()
+      
+      // Add timeout to fetch (15 seconds)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => {
+        controller.abort()
+      }, 15000)
+      
+      try {
+        const response = await fetch(internalUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-service-token': serviceToken,
+          },
+          body: JSON.stringify(event),
+          signal: controller.signal,
         })
+        
+        clearTimeout(timeoutId)
+        const duration = Date.now() - startTime
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          log.error('Internal endpoint returned error', new Error(errorText), {
+            mid: event.mid,
+            status: response.status,
+            internalUrl,
+            duration,
+          })
+        } else {
+          log.info('Event forwarded successfully', {
+            mid: event.mid,
+            status: response.status,
+            duration,
+          })
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        const duration = Date.now() - startTime
+        
+        if (fetchError.name === 'AbortError') {
+          log.error('Forwarding event timed out', fetchError, {
+            mid: event.mid,
+            internalUrl,
+            duration,
+            timeout: '15s',
+          })
+        } else {
+          log.error('Failed to forward event to internal endpoint', fetchError, {
+            mid: event.mid,
+            internalUrl,
+            duration,
+            errorMessage: fetchError.message,
+          })
+        }
       }
     } catch (error) {
-      log.error('Failed to forward event to internal endpoint', error, {
+      log.error('Unexpected error forwarding event', error, {
         mid: event.mid,
         internalUrl,
+        errorMessage: error instanceof Error ? error.message : String(error),
       })
     }
   }

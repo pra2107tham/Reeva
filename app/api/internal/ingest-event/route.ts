@@ -78,7 +78,18 @@ export async function POST(request: NextRequest) {
 
     try {
       // Enqueue event to QStash for asynchronous processing
+      log.info('Initializing QStash client', { mid: event.mid })
+      const qstashStartTime = Date.now()
       const qstash = getQStashClient()
+      const qstashInitDuration = Date.now() - qstashStartTime
+      
+      log.info('Publishing event to QStash', {
+        mid: event.mid,
+        consumerUrl,
+        qstashInitDuration,
+      })
+      
+      const publishStartTime = Date.now()
       
       // Use Instagram message ID as deduplication ID to prevent duplicate processing
       // QStash stores deduplication IDs for 90 days
@@ -97,12 +108,17 @@ export async function POST(request: NextRequest) {
         // This ensures messages don't hang indefinitely
         timeout: 30,
       })
+      
+      const publishDuration = Date.now() - publishStartTime
 
       log.info('Event enqueued to QStash successfully', { 
         mid: event.mid,
         messageId,
         consumerUrl,
         deduplicationId: `ig_msg_${event.mid}`,
+        publishDuration,
+        qstashInitDuration,
+        totalDuration: Date.now() - qstashStartTime,
       })
 
       return NextResponse.json(

@@ -76,17 +76,76 @@ export async function POST(request: NextRequest) {
       .update({ consumed: true })
       .eq('token_hash', tokenHash)
 
-    // Link Instagram profile to user account
+    // Fetch Instagram profile details from Instagram Graph API
+    const instagramApiBaseUrl = process.env.INSTAGRAM_API_BASE_URL
+    const instagramAccessToken = process.env.INSTAGRAM_ACCESS_TOKEN
+    
+    let profileData: { username?: string; name?: string; profile_picture_url?: string } = {}
+    
+    if (instagramApiBaseUrl && instagramAccessToken) {
+      try {
+        log.info('Fetching Instagram profile details', { ig_id })
+        const profileUrl = `${instagramApiBaseUrl}/${ig_id}?fields=id,username,name,profile_picture_url`
+        const profileResponse = await fetch(profileUrl, {
+          headers: {
+            Authorization: `Bearer ${instagramAccessToken}`,
+          },
+        })
+
+        if (profileResponse.ok) {
+          const profileJson = await profileResponse.json()
+          profileData.username = profileJson.username || null
+          // Note: name and profile_picture_url are not available for messaging user IDs
+          // They're only available for Instagram Business Account IDs
+          log.info('Instagram profile details fetched', {
+            ig_id,
+            username: profileData.username,
+          })
+        } else {
+          const errorText = await profileResponse.text()
+          log.warn('Failed to fetch Instagram profile details', {
+            ig_id,
+            status: profileResponse.status,
+            error: errorText,
+          })
+          // Continue without profile data - connection will still work
+        }
+      } catch (profileError: any) {
+        log.warn('Error fetching Instagram profile details', { ig_id, profileError })
+        // Continue without profile data - connection will still work
+      }
+    } else {
+      log.warn('Instagram API credentials not configured, skipping profile fetch', {
+        hasBaseUrl: !!instagramApiBaseUrl,
+        hasAccessToken: !!instagramAccessToken,
+      })
+    }
+
+    // Link Instagram profile to user account and update profile data
+    const updateData: any = {
+      connected_user_id: user.id,
+      connected_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // Add profile data if available
+    if (profileData.username) {
+      updateData.username = profileData.username
+    }
+    if (profileData.name) {
+      updateData.name = profileData.name
+    }
+    if (profileData.profile_picture_url) {
+      updateData.profile_picture_url = profileData.profile_picture_url
+    }
+
     const { error: updateError } = await serviceClient
       .from('instagram_profiles')
-      .update({
-        connected_user_id: user.id,
-        connected_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('ig_id', ig_id)
 
     if (updateError) {
-      log.error('Failed to link Instagram profile', updateError, { ig_id, userId: user.id })
+      log.error('Failed to link Instagram profile', updateError, { ig_id, userId: user.id, updateData })
       return NextResponse.json(
         { error: 'Failed to link Instagram account' },
         { status: 500 }
@@ -97,6 +156,9 @@ export async function POST(request: NextRequest) {
       ig_id,
       userId: user.id,
       tokenId: tokenData.id,
+      username: profileData.username,
+      hasDisplayName: !!profileData.name,
+      hasProfilePic: !!profileData.profile_picture_url,
     })
 
     return NextResponse.json({
