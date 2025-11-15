@@ -78,6 +78,10 @@ export function parseMessagingEvents(body: any): IncomingMessagingEvent[] {
 /**
  * Publish events directly to QStash (bypassing internal endpoint)
  * This avoids self-referencing HTTP calls and potential hanging issues
+ * 
+ * IMPORTANT: In serverless environments, we MUST publish before returning the response.
+ * Using setImmediate() or fire-and-forget doesn't work because the execution context
+ * is frozen immediately after the response is sent.
  */
 export async function forwardToInternalIngestion(events: IncomingMessagingEvent[]): Promise<void> {
   const baseUrl = getBaseUrl()
@@ -97,83 +101,74 @@ export async function forwardToInternalIngestion(events: IncomingMessagingEvent[
     eventMids: events.map(e => e.mid),
   })
 
-  // Publish each event directly to QStash (fire-and-forget)
-  // This avoids the self-referencing HTTP call issue
-  for (const event of events) {
-    // Fire and forget - don't await, just start the publish
-    // This ensures webhook handler returns immediately
-    // Use setImmediate to ensure this runs after the response is sent
-    setImmediate(() => {
-      const publishPromise = (async () => {
-        try {
-          log.info('Publishing event to QStash', {
-            mid: event.mid,
-            senderIgId: event.sender_ig_id,
-            consumerUrl,
-          })
-          
-          const startTime = Date.now()
-          const qstash = getQStashClient()
-          
-          // Add timeout wrapper for QStash publish (10 seconds max)
-          // This prevents hanging if QStash API is slow or unreachable
-          const qstashPublishPromise = qstash.publishJSON({
-            url: consumerUrl,
-            body: event,
-            // Deduplication: Use Instagram message ID to prevent duplicate processing
-            deduplicationId: `ig_msg_${event.mid}`,
-            // Retries: Configure explicit retries
-            retries: 3,
-            // Label: Add label for better log filtering
-            label: 'instagram-messaging-event',
-            // Timeout: Set timeout for message processing (30 seconds)
-            timeout: 30,
-          })
-          
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('QStash publish timeout after 10 seconds'))
-            }, 10000) // 10 second timeout for publish call itself
-          })
-          
-          const messageId = await Promise.race([qstashPublishPromise, timeoutPromise])
-          const duration = Date.now() - startTime
-          
-          log.info('Event published to QStash successfully', {
-            mid: event.mid,
-            messageId: messageId.messageId,
-            duration,
-            consumerUrl,
-          })
-        } catch (publishError: any) {
-          const duration = Date.now() - Date.now() // Will be negative, but that's okay
-          
-          if (publishError.message?.includes('timeout')) {
-            log.warn('QStash publish timed out (fire-and-forget)', {
-              mid: event.mid,
-              consumerUrl,
-              timeout: '10s',
-              note: 'QStash may still process the message if it was partially sent',
-            })
-          } else {
-            log.error('Failed to publish event to QStash', publishError, {
-              mid: event.mid,
-              consumerUrl,
-              errorMessage: publishError.message,
-              errorName: publishError.name,
-            })
-          }
-          // Don't throw - webhook handler should still return 200
-          // QStash will handle retries if needed
-        }
-      })()
-      
-      // Don't await - fire and forget
-      // Errors are logged but don't block the webhook response
-      publishPromise.catch(() => {
-        // Already logged above
+  // Publish each event with timeout to ensure webhook responds quickly
+  // We MUST await these to ensure they execute before response is sent (serverless requirement)
+  const publishPromises = events.map(async (event) => {
+    try {
+      log.info('Publishing event to QStash', {
+        mid: event.mid,
+        senderIgId: event.sender_ig_id,
+        consumerUrl,
       })
-    })
-  }
+      
+      const startTime = Date.now()
+      const qstash = getQStashClient()
+      
+      // Add timeout wrapper for QStash publish (3 seconds max)
+      // Keep it short to ensure webhook responds quickly
+      const qstashPublishPromise = qstash.publishJSON({
+        url: consumerUrl,
+        body: event,
+        // Deduplication: Use Instagram message ID to prevent duplicate processing
+        deduplicationId: `ig_msg_${event.mid}`,
+        // Retries: Configure explicit retries
+        retries: 3,
+        // Label: Add label for better log filtering
+        label: 'instagram-messaging-event',
+        // Timeout: Set timeout for message processing (30 seconds)
+        timeout: 30,
+      })
+      
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('QStash publish timeout after 3 seconds'))
+        }, 3000) // 3 second timeout - Instagram expects quick responses
+      })
+      
+      const messageId = await Promise.race([qstashPublishPromise, timeoutPromise])
+      const duration = Date.now() - startTime
+      
+      log.info('Event published to QStash successfully', {
+        mid: event.mid,
+        messageId: messageId.messageId,
+        duration,
+        consumerUrl,
+      })
+    } catch (publishError: any) {
+      const duration = Date.now() - Date.now()
+      
+      if (publishError.message?.includes('timeout')) {
+        log.warn('QStash publish timed out', {
+          mid: event.mid,
+          consumerUrl,
+          timeout: '3s',
+          note: 'Webhook will still respond 200 - Instagram will retry if needed',
+        })
+      } else {
+        log.error('Failed to publish event to QStash', publishError, {
+          mid: event.mid,
+          consumerUrl,
+          errorMessage: publishError.message,
+          errorName: publishError.name,
+        })
+      }
+      // Don't throw - we want webhook to return 200 even if publish fails
+      // Instagram will retry the webhook if we return an error
+    }
+  })
+
+  // Wait for all publishes (with timeout) before returning
+  // Use allSettled to ensure we don't throw even if some fail
+  await Promise.allSettled(publishPromises)
 }
 

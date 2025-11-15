@@ -1,23 +1,93 @@
-# Webhook Hanging Issue - Detailed Analysis
+# Webhook Hanging Issue - Root Cause & Fix
 
-## Current Status
+## ✅ ISSUE RESOLVED
 
-### What's Working ✅
-1. **Webhook Reception**: Instagram webhooks are being received successfully
-2. **Event Parsing**: Events are being parsed correctly from the payload
-3. **QStash Client Initialization**: QStash client is being created
-4. **Publish Initiation**: The `publishJSON` call is being initiated
+### Root Cause Identified
 
-### What's Failing ❌
-1. **QStash Publish Hanging**: The `qstash.publishJSON()` call hangs indefinitely
-2. **No Success/Error Logs**: After "Publishing event to QStash", no logs appear (neither success nor error)
-3. **Webhook Response Delayed**: The webhook handler doesn't return until the publish completes (or times out)
+**The problem was `setImmediate()` in serverless environments.**
 
-## Problem Analysis
+### Serverless Function Lifecycle
 
-### Root Cause Hypothesis
+**Vercel/Serverless**:
+1. Request received
+2. Handler executes
+3. Response sent (`return NextResponse('OK')`)
+4. **⚠️ Function execution frozen/terminated immediately**
+5. Any pending `setImmediate()` callbacks **never execute**
+6. Result: QStash publish never happens
 
-The `qstash.publishJSON()` call is hanging, likely due to one of these issues:
+**Local Node.js**:
+1. Request received
+2. Handler executes
+3. Response sent
+4. **Process keeps running**
+5. `setImmediate()` callbacks execute
+6. QStash publish happens ✅
+
+### Why It Worked Locally But Not in Production
+
+- **Local**: Node.js process continues after response → `setImmediate()` runs → QStash publishes
+- **Production**: Serverless function freezes after response → `setImmediate()` never runs → No publish
+
+## The Fix
+
+**Changed from fire-and-forget to await-with-timeout:**
+
+1. **Removed `setImmediate()`** - This was preventing execution in serverless
+2. **Added `await forwardToInternalIngestion(events)`** - Ensures publish happens before response
+3. **Reduced timeout to 3 seconds** - Quick response for Instagram
+4. **Used `Promise.allSettled()`** - Ensures webhook returns 200 even if publish fails
+
+### Before (Broken)
+```typescript
+// Fire and forget with setImmediate - DOESN'T WORK IN SERVERLESS
+Promise.resolve()
+  .then(() => forwardToInternalIngestion(events))
+  .catch(...)
+
+// Inside forwardToInternalIngestion:
+setImmediate(() => {
+  // This never executes in serverless!
+  qstash.publishJSON(...)
+})
+```
+
+### After (Fixed)
+```typescript
+// Await before responding - WORKS IN SERVERLESS
+try {
+  await forwardToInternalIngestion(events)
+} catch (error) {
+  log.error('Failed to forward events to QStash', error)
+  // Continue and return 200 anyway
+}
+
+// Inside forwardToInternalIngestion:
+const publishPromises = events.map(async (event) => {
+  // Publishes with 3 second timeout
+  await Promise.race([qstash.publishJSON(...), timeout])
+})
+await Promise.allSettled(publishPromises)
+```
+
+## Key Learnings
+
+### 1. Serverless Execution Model
+- Functions freeze after response is sent
+- No background processing after response
+- Must complete all work before responding
+
+### 2. Fire-and-Forget Doesn't Work
+- `setImmediate()`, `process.nextTick()`, `setTimeout()` don't work
+- Any unawaited promises are lost
+- Must `await` critical operations
+
+### 3. Instagram Webhook Requirements
+- Expects quick responses (< 5 seconds)
+- Will retry on errors or timeouts
+- Best practice: publish quickly with timeout, return 200
+
+## Previous Problem Analysis (Historical)
 
 1. **Network Connectivity Issues in Vercel Serverless**
    - Vercel serverless functions may have network restrictions

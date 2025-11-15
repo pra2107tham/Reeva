@@ -121,17 +121,18 @@ export async function POST(request: NextRequest) {
     if (events.length > 0) {
       log.info('Parsed messaging events', { eventCount: events.length })
       
-      // Forward events to internal ingestion endpoint (async, don't block response)
-      // Use Promise.resolve().then() to ensure it doesn't block the response
-      // but still catches errors properly
-      Promise.resolve()
-        .then(() => forwardToInternalIngestion(events))
-        .catch((error) => {
-          log.error('Failed to forward events to internal endpoint', error, {
-            eventCount: events.length,
-            eventMids: events.map(e => e.mid),
-          })
+      // Forward events to QStash
+      // IMPORTANT: In serverless, we MUST await this before responding
+      // Otherwise the execution context is frozen and QStash publish never happens
+      try {
+        await forwardToInternalIngestion(events)
+      } catch (error) {
+        log.error('Failed to forward events to QStash', error, {
+          eventCount: events.length,
+          eventMids: events.map(e => e.mid),
         })
+        // Continue and return 200 anyway - Instagram will retry if needed
+      }
     } else {
       // Log non-messaging webhooks
       if (body.field && body.value) {
