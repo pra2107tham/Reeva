@@ -10,6 +10,7 @@ import {
   InstagramProfileRow,
   MessageRow,
 } from './utils'
+import { storeMediaItems } from './store-media'
 
 const log = createLogger('Instagram:Ingestion')
 
@@ -24,7 +25,12 @@ export interface IncomingMessagingEvent {
 
 /**
  * Handle incoming messaging event
- * Orchestrates the full flow: profile upsert, message insertion, verification/acknowledgement, Phase 3 enqueue
+ * Orchestrates the full flow:
+ * - Step 1: Profile upsert
+ * - Step 2: Message insertion
+ * - Step 3: Media storage (connected users only)
+ * - Step 4: Phase 4 processing enqueue (connected users only)
+ * For unconnected users: verification flow instead
  */
 export async function handleIncomingMessagingEvent(
   event: IncomingMessagingEvent
@@ -83,7 +89,7 @@ export async function handleIncomingMessagingEvent(
         // Continue - outbound_messages row is already tracked
       }
 
-      // Do NOT process attachments or enqueue Phase 3 for unconnected users
+      // Do NOT process attachments or enqueue Phase 3/4 for unconnected users
       log.info('Unconnected user flow completed', { igId: event.sender_ig_id })
       return { success: true, message: 'Verification DM sent to unconnected user' }
     } else {
@@ -103,18 +109,35 @@ export async function handleIncomingMessagingEvent(
         // Continue - outbound_messages row is already tracked
       }
 
-      // Enqueue for Phase 3 processing
-      log.debug('Enqueuing for Phase 3 processing', { mid: event.mid })
+      // Phase 3: Store media items if attachments exist
+      if (event.attachments) {
+        log.info('Step 3: Processing media attachments', { mid: event.mid })
+        try {
+          await storeMediaItems(event, profileRow)
+          log.info('Step 3: Media storage completed', { mid: event.mid })
+        } catch (error: any) {
+          log.error('Step 3: Failed to store media items', error, {
+            mid: event.mid,
+            igId: event.sender_ig_id,
+          })
+          // Don't throw - allow Phase 4 processing to continue
+        }
+      } else {
+        log.debug('Step 3: No attachments to process', { mid: event.mid })
+      }
+
+      // Phase 4: Enqueue for additional processing
+      log.info('Step 4: Enqueuing for Phase 4 processing', { mid: event.mid })
       const enqueueResult = await enqueueForPhase3Processing(messageRow, profileRow)
-      log.debug('Phase 3 enqueue result', { mid: event.mid, ok: enqueueResult.ok })
+      log.info('Step 4: Enqueue result', { mid: event.mid, ok: enqueueResult.ok })
 
       if (enqueueResult.ok) {
         // Mark message as processed
         log.debug('Marking message as processed', { mid: event.mid })
         await markMessageAsProcessed(event.mid)
-        log.info('Message processed and enqueued for Phase 3', { mid: event.mid })
+        log.info('Step 4: Message processed and enqueued for Phase 4', { mid: event.mid })
       } else {
-        log.warn('Failed to enqueue for Phase 3 processing', { mid: event.mid })
+        log.warn('Step 4: Failed to enqueue for Phase 4 processing', { mid: event.mid })
         // Don't mark as processed if enqueue failed
       }
 
